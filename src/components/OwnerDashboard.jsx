@@ -1227,7 +1227,7 @@ export default function OwnerDashboard() {
           )}
 
           {view === "addInquiry" && (
-            <div className="card form-card" style={{ maxWidth: 640 }}>
+            <div className="card form-card">
               <h2>{selectedInquiry ? "Edit Inquiry" : "Add New Inquiry"}</h2>
               <form onSubmit={handleSaveInquiry}>
                 <div className="form-row">
@@ -1350,7 +1350,7 @@ export default function OwnerDashboard() {
           )}
 
           {view === "addTeacher" && (
-            <div className="card form-card" style={{ maxWidth: 640 }}>
+            <div className="card form-card">
               <h2>{selectedTeacher ? "Edit Teacher" : "Register New Teacher"}</h2>
               <form onSubmit={handleSaveTeacher}>
                 <div className="form-row">
