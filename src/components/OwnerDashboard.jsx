@@ -656,50 +656,75 @@ export default function OwnerDashboard() {
               ) : filtered.length === 0 ? (
                 <div className="empty-state">No students found.</div>
               ) : (
-                <div className="table-wrapper">
-                  <table className="data-table">
-                    <thead>
-                      <tr>
-                        <th>Name</th>
-                        <th>Phone</th>
-                        <th>Course</th>
-                        <th>Teacher</th>
-                        <th>Fees Paid</th>
-                        <th>Pending Fees</th>
-                        <th>Attendance</th>
-                        <th>Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {filtered.map((s) => (
-                        <tr key={s.id}>
-                          <td className="td-name">{s.name}</td>
-                          <td>{s.phone}</td>
-                          <td><span className="badge badge-course">{s.course}</span></td>
-                          <td>{(() => {
-                            const tr = teachers.find((x) => x.id === s.assignedTeacherId || x.uid === s.assignedTeacherId);
-                            return tr ? tr.name : "—";
-                          })()}</td>
-                          <td>₹{(s.feesPaid || 0).toLocaleString()}</td>
-                          <td>
-                            <span className={`badge ${(s.remainingFees || 0) <= 0 ? "badge-success" : "badge-danger"}`}>
-                              ₹{(s.remainingFees || 0).toLocaleString()}
-                            </span>
-                          </td>
-                          <td>{s.attendanceDays || 0}</td>
-                          <td>
-                            <div className="action-btns">
-                              <button className="btn btn-icon btn-view" title="View" onClick={() => handleView(s.id)}>👁</button>
-                              <button className="btn btn-icon btn-edit" title="Edit" onClick={() => handleEdit(s.id)}>✏</button>
-                              <button className="btn btn-icon btn-delete" title="Delete" disabled={deleting === s.id} onClick={() => {
-                                if (window.confirm(`Delete ${s.name}?`)) handleDelete(s.id);
-                              }}>🗑</button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                <div className="responsive-table-container">
+                  <div className="desktop-table">
+                    <div className="table-wrapper">
+                      <table className="data-table">
+                        <thead>
+                          <tr>
+                            <th>Name</th>
+                            <th>Phone</th>
+                            <th>Course</th>
+                            <th>Teacher</th>
+                            <th>Fees Paid</th>
+                            <th>Pending Fees</th>
+                            <th>Attendance</th>
+                            <th>Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {filtered.map((s) => (
+                            <tr key={s.id}>
+                              <td className="td-name">{s.name}</td>
+                              <td>{s.phone}</td>
+                              <td><span className="badge badge-course">{s.course}</span></td>
+                              <td>{(() => {
+                                const tr = teachers.find((x) => x.id === s.assignedTeacherId || x.uid === s.assignedTeacherId);
+                                return tr ? tr.name : "—";
+                              })()}</td>
+                              <td>₹{(s.feesPaid || 0).toLocaleString()}</td>
+                              <td>
+                                <span className={`badge ${(s.remainingFees || 0) <= 0 ? "badge-success" : "badge-danger"}`}>
+                                  ₹{(s.remainingFees || 0).toLocaleString()}
+                                </span>
+                              </td>
+                              <td>{s.attendanceDays || 0}</td>
+                              <td>
+                                <div className="action-btns">
+                                  <button className="btn btn-icon btn-view" title="View" onClick={() => handleView(s.id)}>👁</button>
+                                  <button className="btn btn-icon btn-edit" title="Edit" onClick={() => handleEdit(s.id)}>✏</button>
+                                  <button className="btn btn-icon btn-delete" title="Delete" disabled={deleting === s.id} onClick={() => {
+                                    if (window.confirm(`Delete ${s.name}?`)) handleDelete(s.id);
+                                  }}>🗑</button>
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                  <div className="mobile-cards">
+                    {filtered.map((s) => {
+                      const tr = teachers.find((x) => x.id === s.assignedTeacherId || x.uid === s.assignedTeacherId);
+                      return (
+                        <div key={s.id} className="data-card">
+                          <div className="data-card-row"><span className="data-card-label">👤</span><span className="data-card-value">{s.name}</span></div>
+                          <div className="data-card-row"><span className="data-card-label">📞</span><span className="data-card-value">{s.phone}</span></div>
+                          <div className="data-card-row"><span className="data-card-label">📚</span><span className="data-card-value">{s.course}</span></div>
+                          <div className="data-card-row"><span className="data-card-label">👨‍🏫</span><span className="data-card-value">{tr ? tr.name : "—"}</span></div>
+                          <div className="data-card-row"><span className="data-card-label">💰</span><span className="data-card-value">₹{(s.feesPaid || 0).toLocaleString()}</span></div>
+                          <div className="data-card-row"><span className="data-card-label">💳</span><span className={`data-card-value ${(s.remainingFees || 0) > 0 ? "text-danger" : "text-success"}`}>₹{(s.remainingFees || 0).toLocaleString()}</span></div>
+                          <div className="data-card-row"><span className="data-card-label">📅</span><span className="data-card-value">{s.attendanceDays || 0} days</span></div>
+                          <div className="data-card-actions">
+                            <button className="btn btn-sm btn-secondary" onClick={() => handleView(s.id)}>👁 View</button>
+                            <button className="btn btn-sm btn-primary" onClick={() => handleEdit(s.id)}>✏ Edit</button>
+                            <button className="btn btn-sm btn-danger" disabled={deleting === s.id} onClick={() => { if (window.confirm(`Delete ${s.name}?`)) handleDelete(s.id); }}>🗑 Delete</button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
               )}
             </div>
@@ -997,50 +1022,73 @@ export default function OwnerDashboard() {
               ) : teachers.length === 0 ? (
                 <div className="empty-state">No teachers registered yet.</div>
               ) : (
-                <div className="table-wrapper">
-                  <table className="data-table">
-                    <thead>
-                      <tr>
-                        <th>Name</th>
-                        <th>Phone</th>
-                        <th>Email</th>
-                        <th>Experience</th>
-                        <th>Status</th>
-                        <th>Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {teachers.map((t) => (
-                        <tr key={t.id}>
-                          <td className="td-name">{t.name}</td>
-                          <td>{t.phone || "—"}</td>
-                          <td>{t.email}</td>
-                          <td>{t.experience || "—"}</td>
-                          <td>
-                            <span className={`badge ${t.status === "active" ? "badge-success" : "badge-danger"}`}>
-                              {t.status}
-                            </span>
-                          </td>
-                          <td>
-                            <div className="action-btns">
-                              <button className="btn btn-icon btn-view" title="View" onClick={() => handleViewTeacher(t.id)}>👁</button>
-                              <button className="btn btn-icon btn-edit" title="Edit" onClick={() => handleEditTeacher(t.id)}>✏</button>
-                              <button
-                                className="btn btn-sm"
-                                style={{ background: t.status === "active" ? "var(--warning-bg)" : "var(--success-bg)", color: t.status === "active" ? "#92400e" : "#065f46", border: "none" }}
-                                onClick={() => handleToggleStatus(t.id, t.status)}
-                              >
-                                {t.status === "active" ? "Disable" : "Enable"}
-                              </button>
-                              <button className="btn btn-icon btn-delete" title="Delete" disabled={deleting === t.id} onClick={() => {
-                                if (window.confirm(`Delete teacher ${t.name}? This also removes their login access.`)) handleDeleteTeacher(t.id);
-                              }}>🗑</button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                <div className="responsive-table-container">
+                  <div className="desktop-table">
+                    <div className="table-wrapper">
+                      <table className="data-table">
+                        <thead>
+                          <tr>
+                            <th>Name</th>
+                            <th>Phone</th>
+                            <th>Email</th>
+                            <th>Experience</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {teachers.map((t) => (
+                            <tr key={t.id}>
+                              <td className="td-name">{t.name}</td>
+                              <td>{t.phone || "—"}</td>
+                              <td>{t.email}</td>
+                              <td>{t.experience || "—"}</td>
+                              <td>
+                                <span className={`badge ${t.status === "active" ? "badge-success" : "badge-danger"}`}>
+                                  {t.status}
+                                </span>
+                              </td>
+                              <td>
+                                <div className="action-btns">
+                                  <button className="btn btn-icon btn-view" title="View" onClick={() => handleViewTeacher(t.id)}>👁</button>
+                                  <button className="btn btn-icon btn-edit" title="Edit" onClick={() => handleEditTeacher(t.id)}>✏</button>
+                                  <button
+                                    className="btn btn-sm"
+                                    style={{ background: t.status === "active" ? "var(--warning-bg)" : "var(--success-bg)", color: t.status === "active" ? "#92400e" : "#065f46", border: "none" }}
+                                    onClick={() => handleToggleStatus(t.id, t.status)}
+                                  >
+                                    {t.status === "active" ? "Disable" : "Enable"}
+                                  </button>
+                                  <button className="btn btn-icon btn-delete" title="Delete" disabled={deleting === t.id} onClick={() => {
+                                    if (window.confirm(`Delete teacher ${t.name}? This also removes their login access.`)) handleDeleteTeacher(t.id);
+                                  }}>🗑</button>
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                  <div className="mobile-cards">
+                    {teachers.map((t) => (
+                      <div key={t.id} className="data-card">
+                        <div className="data-card-row"><span className="data-card-label">👤</span><span className="data-card-value">{t.name}</span></div>
+                        <div className="data-card-row"><span className="data-card-label">📞</span><span className="data-card-value">{t.phone || "—"}</span></div>
+                        <div className="data-card-row"><span className="data-card-label">📧</span><span className="data-card-value">{t.email}</span></div>
+                        <div className="data-card-row"><span className="data-card-label">⭐</span><span className="data-card-value">{t.experience || "—"}</span></div>
+                        <div className="data-card-row"><span className="data-card-label">Status</span><span className={`badge ${t.status === "active" ? "badge-success" : "badge-danger"}`}>{t.status}</span></div>
+                        <div className="data-card-actions">
+                          <button className="btn btn-sm btn-secondary" onClick={() => handleViewTeacher(t.id)}>👁 View</button>
+                          <button className="btn btn-sm btn-primary" onClick={() => handleEditTeacher(t.id)}>✏ Edit</button>
+                          <button className="btn btn-sm" style={{ background: t.status === "active" ? "var(--warning-bg)" : "var(--success-bg)", color: t.status === "active" ? "#92400e" : "#065f46", border: "none" }} onClick={() => handleToggleStatus(t.id, t.status)}>
+                            {t.status === "active" ? "⛔ Disable" : "✅ Enable"}
+                          </button>
+                          <button className="btn btn-sm btn-danger" disabled={deleting === t.id} onClick={() => { if (window.confirm(`Delete teacher ${t.name}?`)) handleDeleteTeacher(t.id); }}>🗑 Delete</button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
             </div>
@@ -1102,45 +1150,78 @@ export default function OwnerDashboard() {
               {students.length === 0 ? (
                 <div className="empty-state">No students found.</div>
               ) : (
-                <div className="table-wrapper">
-                  <table className="data-table">
-                    <thead>
-                      <tr>
-                        <th>Student Name</th>
-                        <th>Course</th>
-                        <th>Current Teacher</th>
-                        <th>Assign Teacher</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {students.map((s) => {
-                        const assignedTeacher = teachers.find((x) => x.id === s.assignedTeacherId || x.uid === s.assignedTeacherId);
-                        return (
-                          <tr key={s.id}>
-                            <td className="td-name">{s.name}</td>
-                            <td><span className="badge badge-course">{s.course}</span></td>
-                            <td>{assignedTeacher ? assignedTeacher.name : <span style={{ color: "var(--gray-400)" }}>Not assigned</span>}</td>
-                            <td>
-                              <select
-                                value={s.assignedTeacherId || ""}
-                                onChange={(e) => handleAssignTeacher(s.id, e.target.value)}
-                                style={{
-                                  padding: "6px 10px", border: "1px solid var(--gray-300)",
-                                  borderRadius: 6, fontSize: 13, fontFamily: "var(--font)", background: "white",
-                                  maxWidth: 180,
-                                }}
-                              >
-                                <option value="">— None —</option>
-                                {teachers.filter((t) => t.status !== "inactive").map((t) => (
-                                  <option key={t.id} value={t.id}>{t.name}</option>
-                                ))}
-                              </select>
-                            </td>
+                <div className="responsive-table-container">
+                  <div className="desktop-table">
+                    <div className="table-wrapper">
+                      <table className="data-table">
+                        <thead>
+                          <tr>
+                            <th>Student Name</th>
+                            <th>Course</th>
+                            <th>Current Teacher</th>
+                            <th>Assign Teacher</th>
                           </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
+                        </thead>
+                        <tbody>
+                          {students.map((s) => {
+                            const assignedTeacher = teachers.find((x) => x.id === s.assignedTeacherId || x.uid === s.assignedTeacherId);
+                            return (
+                              <tr key={s.id}>
+                                <td className="td-name">{s.name}</td>
+                                <td><span className="badge badge-course">{s.course}</span></td>
+                                <td>{assignedTeacher ? assignedTeacher.name : <span style={{ color: "var(--gray-400)" }}>Not assigned</span>}</td>
+                                <td>
+                                  <select
+                                    value={s.assignedTeacherId || ""}
+                                    onChange={(e) => handleAssignTeacher(s.id, e.target.value)}
+                                    style={{
+                                      padding: "6px 10px", border: "1px solid var(--gray-300)",
+                                      borderRadius: 6, fontSize: 13, fontFamily: "var(--font)", background: "white",
+                                      maxWidth: 180,
+                                    }}
+                                  >
+                                    <option value="">— None —</option>
+                                    {teachers.filter((t) => t.status !== "inactive").map((t) => (
+                                      <option key={t.id} value={t.id}>{t.name}</option>
+                                    ))}
+                                  </select>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                  <div className="mobile-cards">
+                    {students.map((s) => {
+                      const assignedTeacher = teachers.find((x) => x.id === s.assignedTeacherId || x.uid === s.assignedTeacherId);
+                      return (
+                        <div key={s.id} className="data-card">
+                          <div className="data-card-row"><span className="data-card-label">👤</span><span className="data-card-value">{s.name}</span></div>
+                          <div className="data-card-row"><span className="data-card-label">📚</span><span className="data-card-value">{s.course}</span></div>
+                          <div className="data-card-row"><span className="data-card-label">👨‍🏫</span><span className="data-card-value">{assignedTeacher ? assignedTeacher.name : <span style={{ color: "var(--gray-400)" }}>Not assigned</span>}</span></div>
+                          <div className="data-card-row" style={{ flexDirection: "column", alignItems: "stretch", gap: 6 }}>
+                            <span className="data-card-label">Assign Teacher</span>
+                            <select
+                              value={s.assignedTeacherId || ""}
+                              onChange={(e) => handleAssignTeacher(s.id, e.target.value)}
+                              style={{
+                                padding: "10px 12px", border: "1px solid var(--gray-300)",
+                                borderRadius: 8, fontSize: 14, fontFamily: "var(--font)", background: "white",
+                                width: "100%",
+                              }}
+                            >
+                              <option value="">— None —</option>
+                              {teachers.filter((t) => t.status !== "inactive").map((t) => (
+                                <option key={t.id} value={t.id}>{t.name}</option>
+                              ))}
+                            </select>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
               )}
             </div>
@@ -1170,57 +1251,89 @@ export default function OwnerDashboard() {
               ) : filteredInquiries.length === 0 ? (
                 <div className="empty-state">No inquiries found.</div>
               ) : (
-                <div className="table-wrapper">
-                  <table className="data-table">
-                    <thead>
-                      <tr>
-                        <th>Name</th>
-                        <th>Phone</th>
-                        <th>Course</th>
-                        <th>Inquiry Date</th>
-                        <th>Follow-up</th>
-                        <th>Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {filteredInquiries.map((inq) => {
-                        const daysSince = inq.inquiryDate ? Math.floor((new Date() - new Date(inq.inquiryDate)) / (1000 * 60 * 60 * 24)) : 0;
-                        const isDue = daysSince >= 7;
-                        return (
-                        <tr key={inq.id} className={isDue ? "row-followup-due" : ""}>
-                          <td className="td-name">{inq.name}</td>
-                          <td>{inq.phone}</td>
-                          <td><span className="badge badge-course">{inq.courseInterested || "—"}</span></td>
-                          <td>{inq.inquiryDate}</td>
-                          <td>
-                            {isDue ? (
-                              <span style={{ color: "#d97706", fontWeight: 600, fontSize: 13 }}>🟠 Follow-up Due</span>
-                            ) : (
-                              <span style={{ color: "#059669", fontWeight: 600, fontSize: 13 }}>🟢 New</span>
+                <div className="responsive-table-container">
+                  <div className="desktop-table">
+                    <div className="table-wrapper">
+                      <table className="data-table">
+                        <thead>
+                          <tr>
+                            <th>Name</th>
+                            <th>Phone</th>
+                            <th>Course</th>
+                            <th>Inquiry Date</th>
+                            <th>Follow-up</th>
+                            <th>Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {filteredInquiries.map((inq) => {
+                            const daysSince = inq.inquiryDate ? Math.floor((new Date() - new Date(inq.inquiryDate)) / (1000 * 60 * 60 * 24)) : 0;
+                            const isDue = daysSince >= 7;
+                            return (
+                            <tr key={inq.id} className={isDue ? "row-followup-due" : ""}>
+                              <td className="td-name">{inq.name}</td>
+                              <td>{inq.phone}</td>
+                              <td><span className="badge badge-course">{inq.courseInterested || "—"}</span></td>
+                              <td>{inq.inquiryDate}</td>
+                              <td>
+                                {isDue ? (
+                                  <span style={{ color: "#d97706", fontWeight: 600, fontSize: 13 }}>🟠 Follow-up Due</span>
+                                ) : (
+                                  <span style={{ color: "#059669", fontWeight: 600, fontSize: 13 }}>🟢 New</span>
+                                )}
+                              </td>
+                              <td>
+                                <div className="action-btns">
+                                  <button className="btn btn-icon btn-view" title="View" onClick={() => handleViewInquiry(inq.id)}>👁</button>
+                                  <button className="btn btn-icon btn-edit" title="Edit" onClick={() => handleEditInquiry(inq.id)}>✏</button>
+                                  <button className="btn btn-icon btn-delete" title="Delete" disabled={deleting === inq.id} onClick={() => {
+                                    if (window.confirm(`Delete inquiry from ${inq.name}?`)) handleDeleteInquiry(inq.id);
+                                  }}>🗑</button>
+                                  {inq.phone && (
+                                    <button
+                                      className="btn btn-icon"
+                                      title="Send WhatsApp"
+                                      style={{ fontSize: 16 }}
+                                      onClick={() => handleSendFollowUp(inq)}
+                                    >💬</button>
+                                  )}
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                  <div className="mobile-cards">
+                    {filteredInquiries.map((inq) => {
+                      const daysSince = inq.inquiryDate ? Math.floor((new Date() - new Date(inq.inquiryDate)) / (1000 * 60 * 60 * 24)) : 0;
+                      const isDue = daysSince >= 7;
+                      return (
+                        <div key={inq.id} className="data-card" style={isDue ? { borderLeft: "4px solid #d97706" } : {}}>
+                          <div className="data-card-row"><span className="data-card-label">👤</span><span className="data-card-value">{inq.name}</span></div>
+                          <div className="data-card-row"><span className="data-card-label">📞</span><span className="data-card-value">{inq.phone}</span></div>
+                          <div className="data-card-row"><span className="data-card-label">📚</span><span className="data-card-value">{inq.courseInterested || "—"}</span></div>
+                          <div className="data-card-row"><span className="data-card-label">📅</span><span className="data-card-value">{inq.inquiryDate}</span></div>
+                          <div className="data-card-row">
+                            <span className="data-card-label">Follow-up</span>
+                            <span className="data-card-value" style={{ color: isDue ? "#d97706" : "#059669", fontWeight: 600 }}>
+                              {isDue ? "🟠 Follow-up Due" : "🟢 New"}
+                            </span>
+                          </div>
+                          <div className="data-card-actions">
+                            <button className="btn btn-sm btn-secondary" onClick={() => handleViewInquiry(inq.id)}>👁 View</button>
+                            <button className="btn btn-sm btn-primary" onClick={() => handleEditInquiry(inq.id)}>✏ Edit</button>
+                            {inq.phone && (
+                              <button className="btn btn-sm btn-success" onClick={() => handleSendFollowUp(inq)}>💬 WhatsApp</button>
                             )}
-                          </td>
-                          <td>
-                            <div className="action-btns">
-                              <button className="btn btn-icon btn-view" title="View" onClick={() => handleViewInquiry(inq.id)}>👁</button>
-                              <button className="btn btn-icon btn-edit" title="Edit" onClick={() => handleEditInquiry(inq.id)}>✏</button>
-                              <button className="btn btn-icon btn-delete" title="Delete" disabled={deleting === inq.id} onClick={() => {
-                                if (window.confirm(`Delete inquiry from ${inq.name}?`)) handleDeleteInquiry(inq.id);
-                              }}>🗑</button>
-                              {inq.phone && (
-                                <button
-                                  className="btn btn-icon"
-                                  title="Send WhatsApp"
-                                  style={{ fontSize: 16 }}
-                                  onClick={() => handleSendFollowUp(inq)}
-                                >💬</button>
-                              )}
-                            </div>
-                          </td>
-                        </tr>
+                            <button className="btn btn-sm btn-danger" disabled={deleting === inq.id} onClick={() => { if (window.confirm(`Delete inquiry from ${inq.name}?`)) handleDeleteInquiry(inq.id); }}>🗑 Delete</button>
+                          </div>
+                        </div>
                       );
                     })}
-                    </tbody>
-                  </table>
+                  </div>
                 </div>
               )}
             </div>
