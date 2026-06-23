@@ -1,0 +1,77 @@
+import {
+  collection, updateDoc, deleteDoc, doc,
+  getDocs, query, orderBy, setDoc, serverTimestamp
+} from "firebase/firestore";
+import { db } from "../firebase";
+
+const TEACHERS = "teachers";
+const USERS = "user";
+const API_KEY = "AIzaSyC2TuLS8tZv-7n_1K23-2RlGBGojXf52ik";
+
+async function createAuthUser(email, password) {
+  const res = await fetch(
+    `https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=${API_KEY}`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password, returnSecureToken: true }),
+    }
+  );
+  const data = await res.json();
+  if (data.error) throw new Error(data.error.message);
+  return { uid: data.localId, email: data.email };
+}
+
+export async function getTeachers() {
+  const q = query(collection(db, TEACHERS), orderBy("name"));
+  const snap = await getDocs(q);
+  return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+}
+
+export async function addTeacher(data) {
+  const { uid } = await createAuthUser(data.email, data.password);
+
+  await setDoc(doc(db, TEACHERS, uid), {
+    uid,
+    name: data.name,
+    phone: data.phone || "",
+    address: data.address || "",
+    experience: data.experience || "",
+    licenseNumber: data.licenseNumber || "",
+    email: data.email,
+    role: "teacher",
+    status: "active",
+    createdAt: serverTimestamp(),
+  });
+
+  await setDoc(doc(db, USERS, uid), {
+    uid,
+    name: data.name,
+    email: data.email,
+    role: "teacher",
+  });
+
+  return uid;
+}
+
+export async function updateTeacher(id, data) {
+  const updateFields = {};
+  if (data.name !== undefined) updateFields.name = data.name;
+  if (data.phone !== undefined) updateFields.phone = data.phone;
+  if (data.address !== undefined) updateFields.address = data.address;
+  if (data.experience !== undefined) updateFields.experience = data.experience;
+  if (data.licenseNumber !== undefined) updateFields.licenseNumber = data.licenseNumber;
+  if (data.status !== undefined) updateFields.status = data.status;
+  await updateDoc(doc(db, TEACHERS, id), updateFields);
+}
+
+export async function deleteTeacher(id) {
+  await deleteDoc(doc(db, TEACHERS, id));
+  await deleteDoc(doc(db, USERS, id));
+}
+
+export async function toggleTeacherStatus(id, currentStatus) {
+  const newStatus = currentStatus === "active" ? "inactive" : "active";
+  await updateDoc(doc(db, TEACHERS, id), { status: newStatus });
+  return newStatus;
+}
