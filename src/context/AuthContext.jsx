@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useState, useRef } from "react";
 import { onAuthStateChanged } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
 import { auth, db } from "../firebase";
@@ -9,21 +9,31 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [userRole, setUserRole] = useState(null);
   const [loading, setLoading] = useState(true);
+  const timerRef = useRef(null);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+      timerRef.current = setTimeout(() => setLoading(false), 8000);
       if (firebaseUser) {
-        const userDoc = await getDoc(doc(db, "user", firebaseUser.uid));
-        const role = userDoc.exists() ? userDoc.data().role : null;
-        setUser({ ...firebaseUser, name: userDoc.data()?.name || "User" });
-        setUserRole(role);
+        try {
+          const userDoc = await getDoc(doc(db, "user", firebaseUser.uid));
+          const role = userDoc.exists() ? userDoc.data().role : null;
+          setUser({ ...firebaseUser, name: userDoc.data()?.name || "User" });
+          setUserRole(role);
+        } catch (err) {
+          console.error("Auth fetch error:", err);
+          setUser(firebaseUser);
+          setUserRole(null);
+        }
       } else {
         setUser(null);
         setUserRole(null);
       }
+      if (timerRef.current) clearTimeout(timerRef.current);
       setLoading(false);
     });
-    return unsubscribe;
+    return () => { unsubscribe(); if (timerRef.current) clearTimeout(timerRef.current); };
   }, []);
 
   return (

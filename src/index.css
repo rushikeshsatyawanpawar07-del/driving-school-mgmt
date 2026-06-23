@@ -124,6 +124,17 @@ body {
 }
 .login-btn:hover { background: var(--primary-dark); }
 .login-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+.login-divider {
+  display: flex; align-items: center; gap: 12px;
+  margin: 20px 0; color: var(--gray-400); font-size: 13px;
+}
+.login-divider::before,
+.login-divider::after { content: ""; flex: 1; height: 1px; background: var(--gray-200); }
+.login-btn-google {
+  background: white; color: var(--gray-700); border: 1px solid var(--gray-300);
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+}
+.login-btn-google:hover { background: var(--gray-100); }
 
 /* Layout */
 .app-layout {
@@ -248,7 +259,7 @@ body {
 }
 
 .sidebar-overlay {
-  display: none;
+  display: block;
   position: fixed;
   inset: 0;
   background: rgba(0,0,0,0.4);
@@ -799,8 +810,6 @@ textarea.form-input {
   .sidebar.open {
     transform: translateX(0);
   }
-  .sidebar-overlay { display: block; }
-  .sidebar.open + .sidebar-overlay { display: block; }
   .main-area { margin-left: 0; }
   .hamburger { display: flex; }
   .main-content { padding: 16px; }

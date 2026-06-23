@@ -128,7 +128,7 @@ export default function TeacherDashboard() {
         </div>
       </aside>
 
-      <div className="sidebar-overlay" onClick={() => setSidebarOpen(false)} />
+      {sidebarOpen && <div className="sidebar-overlay" onClick={() => setSidebarOpen(false)} />}
 
       <div className="main-area">
         <header className="topbar">
