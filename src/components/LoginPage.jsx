@@ -107,11 +107,14 @@ export default function LoginPage() {
           </div>
 
           <div className="form-group">
-            <label htmlFor="password">Password</label>
+            <label htmlFor="password">
+              Password
+              {selectedRole === "client" && <span style={{ fontSize: 12, color: "var(--orange)", marginLeft: 8, fontWeight: 400 }}>(Use Student ID)</span>}
+            </label>
             <input
               id="password"
               type="password"
-              placeholder="••••••••"
+              placeholder={selectedRole === "client" ? "Enter Student ID" : "••••••••"}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
             />

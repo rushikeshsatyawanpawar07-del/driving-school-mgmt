@@ -5,7 +5,7 @@ import { auth } from "../firebase";
 import { useAuth } from "../context/AuthContext";
 import { useNotification } from "../context/NotificationContext";
 import {
-  getStudents, addStudent, updateStudent, deleteStudent, getStudent, recordPayment, assignStudentToTeacher,
+  getStudents, addStudent, updateStudent, deleteStudent, getStudent, recordPayment, assignStudentToTeacher, resetStudentPassword,
 } from "../services/studentService";
 import {
   getTeachers, addTeacher, updateTeacher, deleteTeacher, toggleTeacherStatus,
@@ -662,37 +662,47 @@ export default function OwnerDashboard() {
                       <table className="data-table">
                         <thead>
                           <tr>
+                            <th>Student ID</th>
                             <th>Name</th>
+                            <th>Email</th>
                             <th>Phone</th>
                             <th>Course</th>
-                            <th>Teacher</th>
                             <th>Fees Paid</th>
                             <th>Pending Fees</th>
-                            <th>Attendance</th>
                             <th>Actions</th>
                           </tr>
                         </thead>
                         <tbody>
                           {filtered.map((s) => (
                             <tr key={s.id}>
+                              <td><span className="badge badge-course" style={{ fontFamily: "monospace" }}>{s.studentId || "—"}</span></td>
                               <td className="td-name">{s.name}</td>
+                              <td style={{ fontSize: 13, color: "var(--gray-500)" }}>{s.email || "—"}</td>
                               <td>{s.phone}</td>
                               <td><span className="badge badge-course">{s.course}</span></td>
-                              <td>{(() => {
-                                const tr = teachers.find((x) => x.id === s.assignedTeacherId || x.uid === s.assignedTeacherId);
-                                return tr ? tr.name : "—";
-                              })()}</td>
                               <td>₹{(s.feesPaid || 0).toLocaleString()}</td>
                               <td>
                                 <span className={`badge ${(s.remainingFees || 0) <= 0 ? "badge-success" : "badge-danger"}`}>
                                   ₹{(s.remainingFees || 0).toLocaleString()}
                                 </span>
                               </td>
-                              <td>{s.attendanceDays || 0}</td>
                               <td>
                                 <div className="action-btns">
                                   <button className="btn btn-icon btn-view" title="View" onClick={() => handleView(s.id)}>👁</button>
                                   <button className="btn btn-icon btn-edit" title="Edit" onClick={() => handleEdit(s.id)}>✏</button>
+                                  {s.studentId && (
+                                    <button className="btn btn-icon" title="Copy Student ID" onClick={() => { navigator.clipboard.writeText(s.studentId); addNotification("Student ID copied!"); }} style={{ fontSize: 14 }}>📋</button>
+                                  )}
+                                  {s.email && (
+                                    <button className="btn btn-icon" title="Reset Password" style={{ fontSize: 14 }} onClick={async () => {
+                                      if (!window.confirm(`Reset password for ${s.name}? A new Student ID will be generated.`)) return;
+                                      try {
+                                        const { newStudentId } = await resetStudentPassword(s.studentId);
+                                        addNotification(`Password reset. New Student ID: ${newStudentId}`);
+                                        loadStudents();
+                                      } catch { addNotification("Failed to reset password", "error"); }
+                                    }}>🔑</button>
+                                  )}
                                   <button className="btn btn-icon btn-delete" title="Delete" disabled={deleting === s.id} onClick={() => {
                                     if (window.confirm(`Delete ${s.name}?`)) handleDelete(s.id);
                                   }}>🗑</button>
@@ -709,16 +719,30 @@ export default function OwnerDashboard() {
                       const tr = teachers.find((x) => x.id === s.assignedTeacherId || x.uid === s.assignedTeacherId);
                       return (
                         <div key={s.id} className="data-card">
+                          <div className="data-card-row"><span className="data-card-label">🆔</span><span className="data-card-value" style={{ fontFamily: "monospace" }}>{s.studentId || "—"}</span></div>
                           <div className="data-card-row"><span className="data-card-label">👤</span><span className="data-card-value">{s.name}</span></div>
+                          <div className="data-card-row"><span className="data-card-label">📧</span><span className="data-card-value" style={{ fontSize: 13 }}>{s.email || "—"}</span></div>
                           <div className="data-card-row"><span className="data-card-label">📞</span><span className="data-card-value">{s.phone}</span></div>
                           <div className="data-card-row"><span className="data-card-label">📚</span><span className="data-card-value">{s.course}</span></div>
                           <div className="data-card-row"><span className="data-card-label">👨‍🏫</span><span className="data-card-value">{tr ? tr.name : "—"}</span></div>
                           <div className="data-card-row"><span className="data-card-label">💰</span><span className="data-card-value">₹{(s.feesPaid || 0).toLocaleString()}</span></div>
                           <div className="data-card-row"><span className="data-card-label">💳</span><span className={`data-card-value ${(s.remainingFees || 0) > 0 ? "text-danger" : "text-success"}`}>₹{(s.remainingFees || 0).toLocaleString()}</span></div>
-                          <div className="data-card-row"><span className="data-card-label">📅</span><span className="data-card-value">{s.attendanceDays || 0} days</span></div>
                           <div className="data-card-actions">
                             <button className="btn btn-sm btn-secondary" onClick={() => handleView(s.id)}>👁 View</button>
                             <button className="btn btn-sm btn-primary" onClick={() => handleEdit(s.id)}>✏ Edit</button>
+                            {s.studentId && (
+                              <button className="btn btn-sm" onClick={() => { navigator.clipboard.writeText(s.studentId); addNotification("Student ID copied!"); }}>📋 Copy ID</button>
+                            )}
+                            {s.email && (
+                              <button className="btn btn-sm" style={{ background: "var(--orange)", color: "#fff" }} onClick={async () => {
+                                if (!window.confirm(`Reset password for ${s.name}? A new Student ID will be generated.`)) return;
+                                try {
+                                  const { newStudentId } = await resetStudentPassword(s.studentId);
+                                  addNotification(`Password reset. New Student ID: ${newStudentId}`);
+                                  loadStudents();
+                                } catch { addNotification("Failed to reset password", "error"); }
+                              }}>🔑 Reset</button>
+                            )}
                             <button className="btn btn-sm btn-danger" disabled={deleting === s.id} onClick={() => { if (window.confirm(`Delete ${s.name}?`)) handleDelete(s.id); }}>🗑 Delete</button>
                           </div>
                         </div>
@@ -929,6 +953,14 @@ export default function OwnerDashboard() {
               </div>
 
               <div className="detail-grid">
+                <div className="detail-item">
+                  <span className="detail-label">Student ID</span>
+                  <span className="detail-value" style={{ fontFamily: "monospace" }}>{selectedStudent.studentId || "—"}</span>
+                </div>
+                <div className="detail-item">
+                  <span className="detail-label">Email</span>
+                  <span className="detail-value">{selectedStudent.email || "—"}</span>
+                </div>
                 <div className="detail-item">
                   <span className="detail-label">Phone</span>
                   <span className="detail-value">{selectedStudent.phone}</span>
