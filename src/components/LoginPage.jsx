@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { signInWithEmailAndPassword, signInWithPopup } from "firebase/auth";
+import { signInWithEmailAndPassword } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
-import { auth, db, googleProvider } from "../firebase";
+import { auth, db } from "../firebase";
 
 const roles = [
   { value: "owner", label: "Owner" },
@@ -58,28 +58,6 @@ export default function LoginPage() {
           ? "Invalid email or password."
           : err.message || "Login failed. Check Firebase authorized domains.";
       setError(msg);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleGoogleLogin = async () => {
-    setError("");
-    setLoading(true);
-    try {
-      const result = await signInWithPopup(auth, googleProvider);
-      await redirectAfterLogin(result.user, "client");
-    } catch (err) {
-      console.error("Google login error:", err.code, err.message);
-      if (err.code === "auth/popup-closed-by-user") {
-        setError("Sign-in cancelled.");
-      } else if (err.code === "auth/unauthorized-domain") {
-        setError("This domain is not authorized. Add it in Firebase Console > Authentication > Settings > Authorized domains.");
-      } else if (err.code === "auth/operation-not-allowed") {
-        setError("Google sign-in is not enabled. Enable it in Firebase Console > Authentication > Sign-in method.");
-      } else {
-        setError(err.message || "Google sign-in failed.");
-      }
     } finally {
       setLoading(false);
     }
@@ -141,10 +119,6 @@ export default function LoginPage() {
             {loading ? "Signing in..." : "Sign In"}
           </button>
         </form>
-        <div className="login-divider"><span>or</span></div>
-        <button className="login-btn login-btn-google" onClick={handleGoogleLogin} disabled={loading}>
-          <span style={{ fontSize: 18 }}>G</span> Sign in with Google
-        </button>
       </div>
     </div>
   );
