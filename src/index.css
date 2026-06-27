@@ -391,6 +391,8 @@ body {
 .btn-danger { background: linear-gradient(135deg, var(--danger), #F43F5E); color: white; border-color: transparent; box-shadow: 0 2px 8px rgba(225,29,72,0.25); }
 .btn-danger:hover { background: linear-gradient(135deg, #BE123C, #E11D48); box-shadow: 0 4px 12px rgba(225,29,72,0.35); transform: translateY(-1px); }
 .btn-sm { padding: 6px 12px; font-size: 12px; }
+.btn-whatsapp { background: #25D366; color: white; border-color: transparent; display: inline-flex; align-items: center; gap: 5px; }
+.btn-whatsapp:hover { background: #1DA851; transform: translateY(-1px); box-shadow: 0 2px 8px rgba(37,211,102,0.35); }
 .btn-icon {
   padding: 6px;
   border: none;
