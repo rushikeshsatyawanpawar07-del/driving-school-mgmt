@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { signOut } from "firebase/auth";
 import { useNavigate } from "react-router-dom";
 import { auth } from "../firebase";
@@ -41,6 +41,14 @@ export default function ClientDashboard() {
     navigate("/login", { replace: true });
   };
 
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [animated, setAnimated] = useState(false);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setAnimated(true), 200);
+    return () => clearTimeout(timer);
+  }, []);
+
   const totalClasses = COURSE_TOTAL_CLASSES[student?.course] || 30;
   const attendancePct = Math.min(100, Math.round(((student?.attendanceDays || 0) / totalClasses) * 100));
   const totalFees = student?.totalFees || student?.courseFees || 0;
@@ -50,7 +58,7 @@ export default function ClientDashboard() {
 
   return (
     <div className="app-layout">
-      <aside className="sidebar">
+      <aside className={`sidebar ${sidebarOpen ? "open" : ""}`}>
         <div className="sidebar-brand">
           <span className="sidebar-logo">🚗</span>
           <span>DriveSchool</span>
@@ -72,10 +80,18 @@ export default function ClientDashboard() {
         </div>
       </aside>
 
+      {sidebarOpen && <div className="sidebar-overlay" onClick={() => setSidebarOpen(false)} />}
+
       <div className="main-area">
         <header className="topbar">
-          <h1>My Dashboard</h1>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <button className="hamburger" onClick={() => setSidebarOpen(true)}>
+              <span /><span /><span />
+            </button>
+            <h1>My Dashboard</h1>
+          </div>
           <div className="topbar-right">
+            <button className="btn btn-sm btn-danger mobile-logout-btn" onClick={handleLogout}>Logout</button>
             <span className="user-badge client-badge">Client</span>
           </div>
         </header>
@@ -95,7 +111,7 @@ export default function ClientDashboard() {
               <div className="card" style={{ background: "linear-gradient(135deg, var(--blue), #1a73e8)", color: "#fff" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 12 }}>
                   <div>
-                    <h2 style={{ margin: "0 0 4px", color: "#fff" }}>Welcome, {student.name}</h2>
+                    <h2 style={{ margin: "0 0 4px", color: "#090909" }}>Welcome, {student.name}</h2>
                     <p style={{ opacity: 0.85, margin: 0, fontSize: 14 }}>
                       Student ID: <span style={{ fontFamily: "monospace" }}>{student.studentId || "—"}</span>
                     </p>
@@ -139,31 +155,56 @@ export default function ClientDashboard() {
               </div>
 
               <div className="card">
-                <h3 style={{ margin: "0 0 16px" }}>Course Progress</h3>
-                <div style={{ marginBottom: 20 }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
-                    <span style={{ fontSize: 13, fontWeight: 600 }}>Attendance</span>
-                    <span style={{ fontSize: 13, color: "var(--gray-500)" }}>{attendancePct}%</span>
+                <h3 className="text-base font-semibold text-[#090909] mb-5">Course Progress</h3>
+
+                <div className="group mb-6 hover:scale-[1.02] transition-all duration-300 cursor-default">
+                  <div className="flex items-center justify-between mb-2.5">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[15px]">📅</span>
+                      <span className="text-sm font-semibold text-gray-700">Attendance</span>
+                    </div>
+                    <span className="text-xs font-medium text-gray-400 tabular-nums">{student.attendanceDays || 0} / {totalClasses}</span>
                   </div>
-                  <div style={{ height: 10, background: "var(--gray-200)", borderRadius: 5, overflow: "hidden" }}>
-                    <div style={{ height: "100%", width: `${attendancePct}%`, background: attendancePct >= 80 ? "var(--green)" : "var(--orange)", borderRadius: 5, transition: "width 0.5s" }} />
+                  <div className="relative h-3.5 bg-gray-100/80 rounded-full overflow-hidden shadow-[inset_0_1px_3px_rgba(0,0,0,0.08)]">
+                    <div
+                      className="h-full rounded-full transition-all duration-[1400ms] ease-[cubic-bezier(0.34,1.56,0.64,1)]"
+                      style={{
+                        width: `${animated ? attendancePct : 0}%`,
+                        background: 'linear-gradient(90deg, #059669, #22C55E, #4ADE80)',
+                        boxShadow: animated ? '0 0 14px rgba(34,197,94,0.45), 0 0 40px rgba(34,197,94,0.15)' : 'none',
+                      }}
+                    />
+                    <div className={`absolute right-2 top-1/2 -translate-y-1/2 transition-all duration-700 ${animated ? 'opacity-100' : 'opacity-0'}`}>
+                      <span className={`text-[11px] font-bold tracking-tight ${attendancePct > 25 ? 'text-white' : 'text-emerald-600'}`}>
+                        {attendancePct}%
+                      </span>
+                    </div>
                   </div>
-                  <p style={{ fontSize: 11, color: "var(--gray-400)", margin: "4px 0 0" }}>
-                    {student.attendanceDays || 0} of {totalClasses} classes attended
-                  </p>
                 </div>
 
-                <div>
-                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
-                    <span style={{ fontSize: 13, fontWeight: 600 }}>Fees</span>
-                    <span style={{ fontSize: 13, color: "var(--gray-500)" }}>{feesPct}%</span>
+                <div className="group hover:scale-[1.02] transition-all duration-300 cursor-default">
+                  <div className="flex items-center justify-between mb-2.5">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[15px]">💳</span>
+                      <span className="text-sm font-semibold text-gray-700">Fees</span>
+                    </div>
+                    <span className="text-xs font-medium text-gray-400 tabular-nums">₹{feesPaid.toLocaleString()} / ₹{totalFees.toLocaleString()}</span>
                   </div>
-                  <div style={{ height: 10, background: "var(--gray-200)", borderRadius: 5, overflow: "hidden" }}>
-                    <div style={{ height: "100%", width: `${feesPct}%`, background: pendingFees <= 0 ? "var(--green)" : "var(--orange)", borderRadius: 5, transition: "width 0.5s" }} />
+                  <div className="relative h-3.5 bg-gray-100/80 rounded-full overflow-hidden shadow-[inset_0_1px_3px_rgba(0,0,0,0.08)]">
+                    <div
+                      className="h-full rounded-full transition-all duration-[1400ms] ease-[cubic-bezier(0.34,1.56,0.64,1)]"
+                      style={{
+                        width: `${animated ? feesPct : 0}%`,
+                        background: 'linear-gradient(90deg, #2563EB, #3B82F6, #60A5FA)',
+                        boxShadow: animated ? '0 0 14px rgba(59,130,246,0.45), 0 0 40px rgba(59,130,246,0.15)' : 'none',
+                      }}
+                    />
+                    <div className={`absolute right-2 top-1/2 -translate-y-1/2 transition-all duration-700 ${animated ? 'opacity-100' : 'opacity-0'}`}>
+                      <span className={`text-[11px] font-bold tracking-tight ${feesPct > 25 ? 'text-white' : 'text-blue-600'}`}>
+                        {feesPct}%
+                      </span>
+                    </div>
                   </div>
-                  <p style={{ fontSize: 11, color: "var(--gray-400)", margin: "4px 0 0" }}>
-                    ₹{feesPaid.toLocaleString()} paid of ₹{totalFees.toLocaleString()}
-                  </p>
                 </div>
               </div>
 
