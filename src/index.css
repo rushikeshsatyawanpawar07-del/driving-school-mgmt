@@ -892,6 +892,13 @@ textarea.form-input {
   .followup-grid { grid-template-columns: 1fr; }
   .followup-card { padding: 14px; }
   .table-wrapper { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .table-wrapper .data-table th { position: sticky; top: 0; z-index: 2; }
+  .td-phone { white-space: nowrap; }
+  .td-course { max-width: 100px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: inline-block; vertical-align: middle; }
+  .td-attendance { white-space: nowrap; }
+  .td-status { white-space: nowrap; }
+  .td-actions { white-space: nowrap; }
+  .attendance-actions .btn-sm { min-height: 36px; padding: 6px 10px; font-size: 12px; min-width: 70px; }
   .sidebar-brand { padding: 14px 16px; font-size: 18px; }
   .sidebar-nav { padding: 8px; }
   .sidebar-link { padding: 12px 14px; min-height: 44px; font-size: 14px; }
