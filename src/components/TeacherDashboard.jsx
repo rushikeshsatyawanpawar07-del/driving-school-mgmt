@@ -199,33 +199,48 @@ export default function TeacherDashboard() {
               ) : students.length === 0 ? (
                 <div className="empty-state">No students assigned yet.</div>
               ) : (
-                <div className="table-wrapper">
-                  <table className="data-table">
-                    <thead>
-                      <tr>
-                        <th>Name</th>
-                        <th>Phone</th>
-                        <th>Course</th>
-                        <th>Attendance</th>
-                        <th>Status</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {students.map((s) => (
-                        <tr key={s.id}>
-                          <td className="td-name">{s.name}</td>
-                          <td>{s.phone}</td>
-                          <td><span className="badge badge-course">{s.course}</span></td>
-                          <td>{s.attendanceDays || 0}</td>
-                          <td>
-                            <span className={`badge ${s.status === "active" ? "badge-success" : "badge-danger"}`}>
-                              {s.status}
-                            </span>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                <div className="responsive-table-container">
+                  <div className="desktop-table">
+                    <div className="table-wrapper">
+                      <table className="data-table">
+                        <thead>
+                          <tr>
+                            <th>Name</th>
+                            <th>Phone</th>
+                            <th>Course</th>
+                            <th>Attendance</th>
+                            <th>Status</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {students.map((s) => (
+                            <tr key={s.id}>
+                              <td className="td-name">{s.name}</td>
+                              <td>{s.phone}</td>
+                              <td><span className="badge badge-course">{s.course}</span></td>
+                              <td>{s.attendanceDays || 0}</td>
+                              <td>
+                                <span className={`badge ${s.status === "active" ? "badge-success" : "badge-danger"}`}>
+                                  {s.status}
+                                </span>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                  <div className="mobile-cards">
+                    {students.map((s) => (
+                      <div key={s.id} className="data-card">
+                        <div className="data-card-row"><span className="data-card-label">👤</span><span className="data-card-value">{s.name}</span></div>
+                        <div className="data-card-row"><span className="data-card-label">📞</span><span className="data-card-value">{s.phone}</span></div>
+                        <div className="data-card-row"><span className="data-card-label">📚</span><span className="data-card-value">{s.course}</span></div>
+                        <div className="data-card-row"><span className="data-card-label">📅</span><span className="data-card-value">{s.attendanceDays || 0} days</span></div>
+                        <div className="data-card-row"><span className="data-card-label">Status</span><span className={`badge ${s.status === "active" ? "badge-success" : "badge-danger"}`}>{s.status}</span></div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
             </div>
