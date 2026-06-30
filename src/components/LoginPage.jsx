@@ -4,6 +4,7 @@ import { signInWithEmailAndPassword } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
 import { auth, db } from "../firebase";
 
+
 const roles = [
   { value: "owner", label: "Owner" },
   { value: "teacher", label: "Teacher" },
@@ -67,7 +68,7 @@ export default function LoginPage() {
     <div className="login-page">
       <div className="login-card">
         <div className="login-header">
-          <div className="login-icon">🚗</div>
+            <div className="login-icon" style={{ display: "flex", justifyContent: "center" }}><img src="/logo.png" alt="DriveSchool" style={{ width: 80, height: 80, objectFit: "contain" }} /></div>
           <h1>Driving School</h1>
           <p>Sign in to your account</p>
         </div>

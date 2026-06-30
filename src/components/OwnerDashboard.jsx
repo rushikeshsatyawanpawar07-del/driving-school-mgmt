@@ -13,6 +13,12 @@ import {
 import {
   getInquiries, addInquiry, updateInquiry, deleteInquiry, checkFollowUps, markFollowUpSent,
 } from "../services/inquiryService";
+import {
+  LayoutDashboard, Users, GraduationCap, Link2, ClipboardList, Car, Wallet, BadgeAlert,
+  CheckCircle, Bell, Calendar, TriangleAlert, Phone, Eye, Pencil, Trash2, User,
+  Mail, BookOpen, CreditCard, Star, Sunrise, Sun, Sunset, Bike, CircleOff,
+  Key, Copy, Fingerprint, Clock
+} from "lucide-react";
 
 export default function OwnerDashboard() {
   const { user } = useAuth();
@@ -460,11 +466,11 @@ export default function OwnerDashboard() {
   };
 
   const navItems = [
-    { key: "dashboard", label: "Dashboard", icon: "📊" },
-    { key: "students", label: "Students", icon: "👥" },
-    { key: "teachers", label: "Teacher Management", icon: "👨‍🏫" },
-    { key: "assign", label: "Assign Student", icon: "🔗" },
-    { key: "inquiries", label: "Inquiries", icon: "📋" },
+    { key: "dashboard", label: "Dashboard", icon: LayoutDashboard },
+    { key: "students", label: "Students", icon: Users },
+    { key: "teachers", label: "Teacher Management", icon: GraduationCap },
+    { key: "assign", label: "Assign Student", icon: Link2 },
+    { key: "inquiries", label: "Inquiries", icon: ClipboardList },
   ];
 
   const isTeachersActive = view === "teachers" || view === "addTeacher";
@@ -473,7 +479,7 @@ export default function OwnerDashboard() {
     <div className="app-layout">
       <aside className={`sidebar ${sidebarOpen ? "open" : ""}`}>
         <div className="sidebar-brand">
-          <span className="sidebar-logo">🚗</span>
+          <span className="sidebar-logo"><Car size={28} /></span>
           <span>DriveSchool</span>
         </div>
         <nav className="sidebar-nav">
@@ -483,7 +489,7 @@ export default function OwnerDashboard() {
               className={`sidebar-link ${item.key === "dashboard" && view === "dashboard" ? "active" : ""} ${item.key === "students" && (view === "students" || view === "addStudent" || view === "viewStudent") ? "active" : ""} ${item.key === "teachers" && isTeachersActive ? "active" : ""} ${item.key === "assign" && view === "assign" ? "active" : ""} ${item.key === "inquiries" && (view === "inquiries" || view === "addInquiry" || view === "viewInquiry") ? "active" : ""}`}
               onClick={() => { setView(item.key); setSidebarOpen(false); }}
             >
-              <span>{item.icon}</span>
+              <item.icon size={18} />
               {item.label}
             </button>
           ))}
@@ -529,28 +535,28 @@ export default function OwnerDashboard() {
             <>
               <div className="stats-grid">
                 <div className="stat-card">
-                  <div className="stat-icon stat-icon-blue">👥</div>
+                  <div className="stat-icon stat-icon-blue"><Users size={24} /></div>
                   <div className="stat-body">
                     <h3>Total Students</h3>
                     <p className="stat-number">{stats.total}</p>
                   </div>
                 </div>
                 <div className="stat-card">
-                  <div className="stat-icon stat-icon-green">💰</div>
+                  <div className="stat-icon stat-icon-green"><Wallet size={24} /></div>
                   <div className="stat-body">
                     <h3>Fees Collected</h3>
                     <p className="stat-number">₹{stats.feesCollected.toLocaleString()}</p>
                   </div>
                 </div>
                 <div className="stat-card">
-                  <div className="stat-icon stat-icon-red">⏳</div>
+                  <div className="stat-icon stat-icon-red"><BadgeAlert size={24} /></div>
                   <div className="stat-body">
                     <h3>Pending Fees</h3>
                     <p className="stat-number">₹{stats.pendingFees.toLocaleString()}</p>
                   </div>
                 </div>
                 <div className="stat-card">
-                  <div className="stat-icon stat-icon-purple">✅</div>
+                  <div className="stat-icon stat-icon-purple"><CheckCircle size={24} /></div>
                   <div className="stat-body">
                     <h3>Active Students</h3>
                     <p className="stat-number">{stats.active}</p>
@@ -565,7 +571,7 @@ export default function OwnerDashboard() {
               {/* Follow-Up Required Section */}
               <div className="card" style={{ borderLeft: "4px solid #e74c3c" }}>
                 <div className="card-header">
-                  <h2 style={{ color: "#e74c3c" }}>⚠ Follow-Up Required</h2>
+                  <h2 style={{ color: "#e74c3c", display: "flex", alignItems: "center", gap: 6 }}><TriangleAlert size={20} /> Follow-Up Required</h2>
                 </div>
                 {followUpsDue.length === 0 ? (
                   <p style={{ color: "var(--gray-500)", padding: "16px 0", textAlign: "center" }}>
@@ -580,11 +586,12 @@ export default function OwnerDashboard() {
                         </div>
                         <div className="followup-details">
                           <div className="followup-row">
-                            <span className="followup-label">📞</span>
+                            <span className="followup-label"><Phone size={14} /></span>
                             <span>{inq.phone}</span>
                           </div>
                           <div className="followup-row">
-                            <span className="followup-label">📅 Inquiry</span>
+                            <span className="followup-label"><Calendar size={14} /></span>
+                            <span>{inq.inquiryDate}</span>
                             <span>{inq.inquiryDate}</span>
                           </div>
                         </div>
@@ -605,28 +612,28 @@ export default function OwnerDashboard() {
 
               <div className="stats-grid">
                 <div className="stat-card">
-                  <div className="stat-icon stat-icon-blue">📋</div>
+                  <div className="stat-icon stat-icon-blue"><ClipboardList size={24} /></div>
                   <div className="stat-body">
                     <h3>Total Inquiries</h3>
                     <p className="stat-number">{inquiryStats.total}</p>
                   </div>
                 </div>
                 <div className="stat-card">
-                  <div className="stat-icon stat-icon-red">🔔</div>
+                  <div className="stat-icon stat-icon-red"><Bell size={24} /></div>
                   <div className="stat-body">
                     <h3>Follow-up Required</h3>
                     <p className="stat-number">{inquiryStats.followUpRequired}</p>
                   </div>
                 </div>
                 <div className="stat-card">
-                  <div className="stat-icon stat-icon-blue">📅</div>
+                  <div className="stat-icon stat-icon-blue"><Calendar size={24} /></div>
                   <div className="stat-body">
                     <h3>Today's Inquiries</h3>
                     <p className="stat-number">{inquiryStats.today}</p>
                   </div>
                 </div>
                 <div className="stat-card">
-                  <div className="stat-icon stat-icon-green">📆</div>
+                  <div className="stat-icon stat-icon-green"><Calendar size={24} /></div>
                   <div className="stat-body">
                     <h3>This Month's Inquiries</h3>
                     <p className="stat-number">{inquiryStats.thisMonth}</p>
@@ -703,24 +710,24 @@ export default function OwnerDashboard() {
                               </td>
                               <td>
                                 <div className="action-btns">
-                                  <button className="btn btn-icon btn-view" title="View" onClick={() => handleView(s.id)}>👁</button>
-                                  <button className="btn btn-icon btn-edit" title="Edit" onClick={() => handleEdit(s.id)}>✏</button>
+                                  <button className="btn btn-icon btn-view" title="View" onClick={() => handleView(s.id)}><Eye size={18} /></button>
+                                  <button className="btn btn-icon btn-edit" title="Edit" onClick={() => handleEdit(s.id)}><Pencil size={18} /></button>
                                   {s.studentId && (
-                                    <button className="btn btn-icon" title="Copy Student ID" onClick={() => { navigator.clipboard.writeText(s.studentId); addNotification("Student ID copied!"); }} style={{ fontSize: 14 }}>📋</button>
+                                    <button className="btn btn-icon" title="Copy Student ID" onClick={() => { navigator.clipboard.writeText(s.studentId); addNotification("Student ID copied!"); }}><Copy size={18} /></button>
                                   )}
                                   {s.email && (
-                                    <button className="btn btn-icon" title="Reset Password" style={{ fontSize: 14 }} onClick={async () => {
+                                    <button className="btn btn-icon" title="Reset Password" onClick={async () => {
                                       if (!window.confirm(`Reset password for ${s.name}? A new Student ID will be generated.`)) return;
                                       try {
                                         const { newStudentId } = await resetStudentPassword(s.studentId);
                                         addNotification(`Password reset. New Student ID: ${newStudentId}`);
                                         loadStudents();
                                       } catch { addNotification("Failed to reset password", "error"); }
-                                    }}>🔑</button>
+                                    }}><Key size={18} /></button>
                                   )}
                                   <button className="btn btn-icon btn-delete" title="Delete" disabled={deleting === s.id} onClick={() => {
                                     if (window.confirm(`Delete ${s.name}?`)) handleDelete(s.id);
-                                  }}>🗑</button>
+                                  }}><Trash2 size={18} /></button>
                                 </div>
                               </td>
                             </tr>
@@ -734,19 +741,19 @@ export default function OwnerDashboard() {
                       const tr = teachers.find((x) => x.id === s.assignedTeacherId || x.uid === s.assignedTeacherId);
                       return (
                         <div key={s.id} className="data-card">
-                          <div className="data-card-row"><span className="data-card-label">🆔</span><span className="data-card-value" style={{ fontFamily: "monospace" }}>{s.studentId || "—"}</span></div>
-                          <div className="data-card-row"><span className="data-card-label">👤</span><span className="data-card-value">{s.name}</span></div>
-                          <div className="data-card-row"><span className="data-card-label">📧</span><span className="data-card-value" style={{ fontSize: 13 }}>{s.email || "—"}</span></div>
-                          <div className="data-card-row"><span className="data-card-label">📞</span><span className="data-card-value">{s.phone}</span></div>
-                          <div className="data-card-row"><span className="data-card-label">📚</span><span className="data-card-value">{s.course}</span></div>
-                          <div className="data-card-row"><span className="data-card-label">👨‍🏫</span><span className="data-card-value">{tr ? tr.name : "—"}</span></div>
-                          <div className="data-card-row"><span className="data-card-label">💰</span><span className="data-card-value">₹{(s.feesPaid || 0).toLocaleString()}</span></div>
-                          <div className="data-card-row"><span className="data-card-label">💳</span><span className={`data-card-value ${(s.remainingFees || 0) > 0 ? "text-danger" : "text-success"}`}>₹{(s.remainingFees || 0).toLocaleString()}</span></div>
+                          <div className="data-card-row"><span className="data-card-label"><Fingerprint size={14} /></span><span className="data-card-value" style={{ fontFamily: "monospace" }}>{s.studentId || "—"}</span></div>
+                          <div className="data-card-row"><span className="data-card-label"><User size={14} /></span><span className="data-card-value">{s.name}</span></div>
+                          <div className="data-card-row"><span className="data-card-label"><Mail size={14} /></span><span className="data-card-value" style={{ fontSize: 13 }}>{s.email || "—"}</span></div>
+                          <div className="data-card-row"><span className="data-card-label"><Phone size={14} /></span><span className="data-card-value">{s.phone}</span></div>
+                          <div className="data-card-row"><span className="data-card-label"><BookOpen size={14} /></span><span className="data-card-value">{s.course}</span></div>
+                          <div className="data-card-row"><span className="data-card-label"><GraduationCap size={14} /></span><span className="data-card-value">{tr ? tr.name : "—"}</span></div>
+                          <div className="data-card-row"><span className="data-card-label"><Wallet size={14} /></span><span className="data-card-value">₹{(s.feesPaid || 0).toLocaleString()}</span></div>
+                          <div className="data-card-row"><span className="data-card-label"><CreditCard size={14} /></span><span className={`data-card-value ${(s.remainingFees || 0) > 0 ? "text-danger" : "text-success"}`}>₹{(s.remainingFees || 0).toLocaleString()}</span></div>
                           <div className="data-card-actions">
-                            <button className="btn btn-sm btn-secondary" onClick={() => handleView(s.id)}>👁 View</button>
-                            <button className="btn btn-sm btn-primary" onClick={() => handleEdit(s.id)}>✏ Edit</button>
+                            <button className="btn btn-sm btn-secondary" onClick={() => handleView(s.id)}><Eye size={16} /> View</button>
+                            <button className="btn btn-sm btn-primary" onClick={() => handleEdit(s.id)}><Pencil size={16} /> Edit</button>
                             {s.studentId && (
-                              <button className="btn btn-sm" onClick={() => { navigator.clipboard.writeText(s.studentId); addNotification("Student ID copied!"); }}>📋 Copy ID</button>
+                              <button className="btn btn-sm" onClick={() => { navigator.clipboard.writeText(s.studentId); addNotification("Student ID copied!"); }}><Copy size={16} /> Copy ID</button>
                             )}
                             {s.email && (
                               <button className="btn btn-sm" style={{ background: "var(--orange)", color: "#fff" }} onClick={async () => {
@@ -756,9 +763,9 @@ export default function OwnerDashboard() {
                                   addNotification(`Password reset. New Student ID: ${newStudentId}`);
                                   loadStudents();
                                 } catch { addNotification("Failed to reset password", "error"); }
-                              }}>🔑 Reset</button>
+                              }}><Key size={16} /> Reset</button>
                             )}
-                            <button className="btn btn-sm btn-danger" disabled={deleting === s.id} onClick={() => { if (window.confirm(`Delete ${s.name}?`)) handleDelete(s.id); }}>🗑 Delete</button>
+                            <button className="btn btn-sm btn-danger" disabled={deleting === s.id} onClick={() => { if (window.confirm(`Delete ${s.name}?`)) handleDelete(s.id); }}><Trash2 size={16} /> Delete</button>
                           </div>
                         </div>
                       );
@@ -777,7 +784,7 @@ export default function OwnerDashboard() {
                   {/* Section 1: Student Information */}
                   <div className="form-section">
                     <div className="form-section-header">
-                      <span className="form-section-icon">👤</span>
+                      <User size={20} />
                       <h3>Student Information</h3>
                     </div>
                     <div className="form-row">
@@ -811,7 +818,7 @@ export default function OwnerDashboard() {
                   {/* Section 2: Course Information */}
                   <div className="form-section">
                     <div className="form-section-header">
-                      <span className="form-section-icon">📚</span>
+                      <BookOpen size={20} />
                       <h3>Course Information</h3>
                     </div>
                     <div className="form-group">
@@ -851,19 +858,19 @@ export default function OwnerDashboard() {
                       <div className="course-details-card">
                         <div className="course-details-grid">
                           <div className="form-group">
-                            <label>📖 Course Type</label>
+                            <label><BookOpen size={14} /> Course Type</label>
                             <input className="form-input" value={form.courseType} onChange={(e) => setForm({ ...form, courseType: e.target.value })} />
                           </div>
                           <div className="form-group">
-                            <label>⏱ Duration (Days)</label>
+                            <label><Clock size={14} /> Duration (Days)</label>
                             <input className="form-input" value={form.duration} onChange={(e) => setForm({ ...form, duration: e.target.value })} />
                           </div>
                           <div className="form-group">
-                            <label>📅 Total Classes</label>
+                            <label><Calendar size={14} /> Total Classes</label>
                             <input className="form-input" type="number" value={form.totalClasses} onChange={(e) => setForm({ ...form, totalClasses: e.target.value })} />
                           </div>
                           <div className="form-group">
-                            <label>⏳ Class Duration (Minutes)</label>
+                            <label><Clock size={14} /> Class Duration (Minutes)</label>
                             <input className="form-input" value={form.classDuration} onChange={(e) => setForm({ ...form, classDuration: e.target.value })} />
                           </div>
                         </div>
@@ -874,7 +881,7 @@ export default function OwnerDashboard() {
                   {/* Section 3: Admission Information */}
                   <div className="form-section">
                     <div className="form-section-header">
-                      <span className="form-section-icon">📋</span>
+                      <ClipboardList size={20} />
                       <h3>Admission Information</h3>
                     </div>
                     <div className="form-row">
@@ -897,13 +904,13 @@ export default function OwnerDashboard() {
                         <label>Batch</label>
                         <div className="radio-group">
                           <label className={`radio-label ${form.batch === "Morning" ? "active" : ""}`}>
-                            <input type="radio" name="batch" value="Morning" checked={form.batch === "Morning"} onChange={(e) => setForm({ ...form, batch: e.target.value })} /> 🌅 Morning
+                            <input type="radio" name="batch" value="Morning" checked={form.batch === "Morning"} onChange={(e) => setForm({ ...form, batch: e.target.value })} /> <Sunrise size={16} /> Morning
                           </label>
                           <label className={`radio-label ${form.batch === "Afternoon" ? "active" : ""}`}>
-                            <input type="radio" name="batch" value="Afternoon" checked={form.batch === "Afternoon"} onChange={(e) => setForm({ ...form, batch: e.target.value })} /> ☀️ Afternoon
+                            <input type="radio" name="batch" value="Afternoon" checked={form.batch === "Afternoon"} onChange={(e) => setForm({ ...form, batch: e.target.value })} /> <Sun size={16} /> Afternoon
                           </label>
                           <label className={`radio-label ${form.batch === "Evening" ? "active" : ""}`}>
-                            <input type="radio" name="batch" value="Evening" checked={form.batch === "Evening"} onChange={(e) => setForm({ ...form, batch: e.target.value })} /> 🌆 Evening
+                            <input type="radio" name="batch" value="Evening" checked={form.batch === "Evening"} onChange={(e) => setForm({ ...form, batch: e.target.value })} /> <Sunset size={16} /> Evening
                           </label>
                         </div>
                       </div>
@@ -911,10 +918,10 @@ export default function OwnerDashboard() {
                         <label>Vehicle Type</label>
                         <div className="radio-group">
                           <label className={`radio-label ${form.vehicleType === "Two Wheeler" ? "active" : ""}`}>
-                            <input type="radio" name="vehicleType" value="Two Wheeler" checked={form.vehicleType === "Two Wheeler"} onChange={(e) => setForm({ ...form, vehicleType: e.target.value })} /> 🏍 Two Wheeler
+                            <input type="radio" name="vehicleType" value="Two Wheeler" checked={form.vehicleType === "Two Wheeler"} onChange={(e) => setForm({ ...form, vehicleType: e.target.value })} /> <Bike size={16} /> Two Wheeler
                           </label>
                           <label className={`radio-label ${form.vehicleType === "Four Wheeler" ? "active" : ""}`}>
-                            <input type="radio" name="vehicleType" value="Four Wheeler" checked={form.vehicleType === "Four Wheeler"} onChange={(e) => setForm({ ...form, vehicleType: e.target.value })} /> 🚗 Four Wheeler
+                            <input type="radio" name="vehicleType" value="Four Wheeler" checked={form.vehicleType === "Four Wheeler"} onChange={(e) => setForm({ ...form, vehicleType: e.target.value })} /> <Car size={16} /> Four Wheeler
                           </label>
                         </div>
                       </div>
@@ -1097,8 +1104,8 @@ export default function OwnerDashboard() {
                               </td>
                               <td>
                                 <div className="action-btns">
-                                  <button className="btn btn-icon btn-view" title="View" onClick={() => handleViewTeacher(t.id)}>👁</button>
-                                  <button className="btn btn-icon btn-edit" title="Edit" onClick={() => handleEditTeacher(t.id)}>✏</button>
+                                  <button className="btn btn-icon btn-view" title="View" onClick={() => handleViewTeacher(t.id)}><Eye size={18} /></button>
+                                  <button className="btn btn-icon btn-edit" title="Edit" onClick={() => handleEditTeacher(t.id)}><Pencil size={18} /></button>
                                   <button
                                     className="btn btn-sm"
                                     style={{ background: t.status === "active" ? "var(--warning-bg)" : "var(--success-bg)", color: t.status === "active" ? "#92400e" : "#065f46", border: "none" }}
@@ -1108,7 +1115,7 @@ export default function OwnerDashboard() {
                                   </button>
                                   <button className="btn btn-icon btn-delete" title="Delete" disabled={deleting === t.id} onClick={() => {
                                     if (window.confirm(`Delete teacher ${t.name}? This also removes their login access.`)) handleDeleteTeacher(t.id);
-                                  }}>🗑</button>
+                                  }}><Trash2 size={18} /></button>
                                 </div>
                               </td>
                             </tr>
@@ -1120,18 +1127,18 @@ export default function OwnerDashboard() {
                   <div className="mobile-cards">
                     {teachers.map((t) => (
                       <div key={t.id} className="data-card">
-                        <div className="data-card-row"><span className="data-card-label">👤</span><span className="data-card-value">{t.name}</span></div>
-                        <div className="data-card-row"><span className="data-card-label">📞</span><span className="data-card-value">{t.phone || "—"}</span></div>
-                        <div className="data-card-row"><span className="data-card-label">📧</span><span className="data-card-value">{t.email}</span></div>
-                        <div className="data-card-row"><span className="data-card-label">⭐</span><span className="data-card-value">{t.experience || "—"}</span></div>
+                        <div className="data-card-row"><span className="data-card-label"><User size={14} /></span><span className="data-card-value">{t.name}</span></div>
+                        <div className="data-card-row"><span className="data-card-label"><Phone size={14} /></span><span className="data-card-value">{t.phone || "—"}</span></div>
+                        <div className="data-card-row"><span className="data-card-label"><Mail size={14} /></span><span className="data-card-value">{t.email}</span></div>
+                        <div className="data-card-row"><span className="data-card-label"><Star size={14} /></span><span className="data-card-value">{t.experience || "—"}</span></div>
                         <div className="data-card-row"><span className="data-card-label">Status</span><span className={`badge ${t.status === "active" ? "badge-success" : "badge-danger"}`}>{t.status}</span></div>
                         <div className="data-card-actions">
-                          <button className="btn btn-sm btn-secondary" onClick={() => handleViewTeacher(t.id)}>👁 View</button>
-                          <button className="btn btn-sm btn-primary" onClick={() => handleEditTeacher(t.id)}>✏ Edit</button>
+                          <button className="btn btn-sm btn-secondary" onClick={() => handleViewTeacher(t.id)}><Eye size={16} /> View</button>
+                          <button className="btn btn-sm btn-primary" onClick={() => handleEditTeacher(t.id)}><Pencil size={16} /> Edit</button>
                           <button className="btn btn-sm" style={{ background: t.status === "active" ? "var(--warning-bg)" : "var(--success-bg)", color: t.status === "active" ? "#92400e" : "#065f46", border: "none" }} onClick={() => handleToggleStatus(t.id, t.status)}>
-                            {t.status === "active" ? "⛔ Disable" : "✅ Enable"}
+                            {t.status === "active" ? <><CircleOff size={16} /> Disable</> : <><CheckCircle size={16} /> Enable</>}
                           </button>
-                          <button className="btn btn-sm btn-danger" disabled={deleting === t.id} onClick={() => { if (window.confirm(`Delete teacher ${t.name}?`)) handleDeleteTeacher(t.id); }}>🗑 Delete</button>
+                          <button className="btn btn-sm btn-danger" disabled={deleting === t.id} onClick={() => { if (window.confirm(`Delete teacher ${t.name}?`)) handleDeleteTeacher(t.id); }}><Trash2 size={16} /> Delete</button>
                         </div>
                       </div>
                     ))}
@@ -1245,9 +1252,9 @@ export default function OwnerDashboard() {
                       const assignedTeacher = teachers.find((x) => x.id === s.assignedTeacherId || x.uid === s.assignedTeacherId);
                       return (
                         <div key={s.id} className="data-card">
-                          <div className="data-card-row"><span className="data-card-label">👤</span><span className="data-card-value">{s.name}</span></div>
-                          <div className="data-card-row"><span className="data-card-label">📚</span><span className="data-card-value">{s.course}</span></div>
-                          <div className="data-card-row"><span className="data-card-label">👨‍🏫</span><span className="data-card-value">{assignedTeacher ? assignedTeacher.name : <span style={{ color: "var(--gray-400)" }}>Not assigned</span>}</span></div>
+                          <div className="data-card-row"><span className="data-card-label"><User size={14} /></span><span className="data-card-value">{s.name}</span></div>
+                          <div className="data-card-row"><span className="data-card-label"><BookOpen size={14} /></span><span className="data-card-value">{s.course}</span></div>
+                          <div className="data-card-row"><span className="data-card-label"><GraduationCap size={14} /></span><span className="data-card-value">{assignedTeacher ? assignedTeacher.name : <span style={{ color: "var(--gray-400)" }}>Not assigned</span>}</span></div>
                           <div className="data-card-row" style={{ flexDirection: "column", alignItems: "stretch", gap: 6 }}>
                             <span className="data-card-label">Assign Teacher</span>
                             <select
@@ -1323,18 +1330,18 @@ export default function OwnerDashboard() {
                               <td>{inq.inquiryDate}</td>
                               <td>
                                 {due ? (
-                                  <span style={{ color: "#d97706", fontWeight: 600, fontSize: 13 }}>🟠 Follow-up Due</span>
+                                  <span style={{ color: "#d97706", fontWeight: 600, fontSize: 13, display: "flex", alignItems: "center", gap: 4 }}><span style={{ width: 8, height: 8, borderRadius: "50%", background: "#d97706", display: "inline-block" }} /> Follow-up Due</span>
                                 ) : (
-                                  <span style={{ color: "#059669", fontWeight: 600, fontSize: 13 }}>🟢 New</span>
+                                  <span style={{ color: "#059669", fontWeight: 600, fontSize: 13, display: "flex", alignItems: "center", gap: 4 }}><span style={{ width: 8, height: 8, borderRadius: "50%", background: "#059669", display: "inline-block" }} /> New</span>
                                 )}
                               </td>
                               <td>
                                 <div className="action-btns">
-                                  <button className="btn btn-icon btn-view" title="View" onClick={() => handleViewInquiry(inq.id)}>👁</button>
-                                  <button className="btn btn-icon btn-edit" title="Edit" onClick={() => handleEditInquiry(inq.id)}>✏</button>
+                                  <button className="btn btn-icon btn-view" title="View" onClick={() => handleViewInquiry(inq.id)}><Eye size={18} /></button>
+                                  <button className="btn btn-icon btn-edit" title="Edit" onClick={() => handleEditInquiry(inq.id)}><Pencil size={18} /></button>
                                   <button className="btn btn-icon btn-delete" title="Delete" disabled={deleting === inq.id} onClick={() => {
                                     if (window.confirm(`Delete inquiry from ${inq.name}?`)) handleDeleteInquiry(inq.id);
-                                  }}>🗑</button>
+                                  }}><Trash2 size={18} /></button>
                                   {inq.phone && (
                                     <button
                                       className="btn btn-sm btn-whatsapp"
@@ -1358,25 +1365,25 @@ export default function OwnerDashboard() {
                       const due = isFollowUpDue(inq);
                       return (
                         <div key={inq.id} className="data-card" style={due ? { borderLeft: "4px solid #d97706" } : {}}>
-                          <div className="data-card-row"><span className="data-card-label">👤</span><span className="data-card-value">{inq.name}</span></div>
-                          <div className="data-card-row"><span className="data-card-label">📞</span><span className="data-card-value">{inq.phone}</span></div>
-                          <div className="data-card-row"><span className="data-card-label">📚</span><span className="data-card-value">{inq.courseInterested || "—"}</span></div>
-                          <div className="data-card-row"><span className="data-card-label">📅</span><span className="data-card-value">{inq.inquiryDate}</span></div>
+                          <div className="data-card-row"><span className="data-card-label"><User size={14} /></span><span className="data-card-value">{inq.name}</span></div>
+                          <div className="data-card-row"><span className="data-card-label"><Phone size={14} /></span><span className="data-card-value">{inq.phone}</span></div>
+                          <div className="data-card-row"><span className="data-card-label"><BookOpen size={14} /></span><span className="data-card-value">{inq.courseInterested || "—"}</span></div>
+                          <div className="data-card-row"><span className="data-card-label"><Calendar size={14} /></span><span className="data-card-value">{inq.inquiryDate}</span></div>
                           <div className="data-card-row">
                             <span className="data-card-label">Follow-up</span>
-                            <span className="data-card-value" style={{ color: due ? "#d97706" : "#059669", fontWeight: 600 }}>
-                              {due ? "🟠 Follow-up Due" : "🟢 New"}
+                            <span className="data-card-value" style={{ color: due ? "#d97706" : "#059669", fontWeight: 600, display: "flex", alignItems: "center", gap: 4 }}>
+                              {due ? <><span style={{ width: 8, height: 8, borderRadius: "50%", background: "#d97706", display: "inline-block" }} /> Follow-up Due</> : <><span style={{ width: 8, height: 8, borderRadius: "50%", background: "#059669", display: "inline-block" }} /> New</>}
                             </span>
                           </div>
                           <div className="data-card-actions">
-                            <button className="btn btn-sm btn-secondary" onClick={() => handleViewInquiry(inq.id)}>👁 View</button>
-                            <button className="btn btn-sm btn-primary" onClick={() => handleEditInquiry(inq.id)}>✏ Edit</button>
+                            <button className="btn btn-sm btn-secondary" onClick={() => handleViewInquiry(inq.id)}><Eye size={16} /> View</button>
+                            <button className="btn btn-sm btn-primary" onClick={() => handleEditInquiry(inq.id)}><Pencil size={16} /> Edit</button>
                             {inq.phone && (
                               <button className="btn btn-sm btn-whatsapp" title="Send WhatsApp" onClick={() => handleSendFollowUp(inq)}>
                                 <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
                               </button>
                             )}
-                            <button className="btn btn-sm btn-danger" disabled={deleting === inq.id} onClick={() => { if (window.confirm(`Delete inquiry from ${inq.name}?`)) handleDeleteInquiry(inq.id); }}>🗑 Delete</button>
+                            <button className="btn btn-sm btn-danger" disabled={deleting === inq.id} onClick={() => { if (window.confirm(`Delete inquiry from ${inq.name}?`)) handleDeleteInquiry(inq.id); }}><Trash2 size={16} /> Delete</button>
                           </div>
                         </div>
                       );

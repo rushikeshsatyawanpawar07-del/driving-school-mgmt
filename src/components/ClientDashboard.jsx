@@ -1,9 +1,10 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { signOut } from "firebase/auth";
 import { useNavigate } from "react-router-dom";
 import { auth } from "../firebase";
 import { useAuth } from "../context/AuthContext";
 import { getStudents, getStudent } from "../services/studentService";
+import { Car, LayoutDashboard, Calendar, ClipboardList, Wallet, BadgeAlert, CreditCard } from "lucide-react";
 
 const COURSE_TOTAL_CLASSES = {
   "Light Motor Vehicle (LMV)": 21,
@@ -60,12 +61,12 @@ export default function ClientDashboard() {
     <div className="app-layout">
       <aside className={`sidebar ${sidebarOpen ? "open" : ""}`}>
         <div className="sidebar-brand">
-          <span className="sidebar-logo">🚗</span>
+          <span className="sidebar-logo"><Car size={28} /></span>
           <span>DriveSchool</span>
         </div>
         <nav className="sidebar-nav">
           <button className="sidebar-link active">
-            <span>📊</span>
+            <LayoutDashboard size={18} />
             Dashboard
           </button>
         </nav>
@@ -111,13 +112,13 @@ export default function ClientDashboard() {
               <div className="card" style={{ background: "linear-gradient(135deg, var(--blue), #1a73e8)", color: "#fff" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 12 }}>
                   <div>
-                    <h2 style={{ margin: "0 0 4px", color: "#090909" }}>Welcome, {student.name}</h2>
+                    <h2 style={{ margin: "0 0 4px", color: "#090909", fontSize: 26 }}>Welcome, <strong>{student.name}</strong></h2>
                     <p style={{ opacity: 0.85, margin: 0, fontSize: 14 }}>
                       Student ID: <span style={{ fontFamily: "monospace" }}>{student.studentId || "—"}</span>
                     </p>
                   </div>
                   <div style={{ textAlign: "right" }}>
-                    <span className="badge" style={{ background: "rgba(255,255,255,0.2)", color: "#fff", fontSize: 12 }}>{student.course}</span>
+                    <span className="badge" style={{ background: "rgba(255,255,255,0.2)", color: "#1F2937", fontSize: 12 }}>{student.course}</span>
                     <p style={{ margin: "4px 0 0", fontSize: 12, opacity: 0.75 }}>Joined {student.joiningDate}</p>
                   </div>
                 </div>
@@ -125,28 +126,28 @@ export default function ClientDashboard() {
 
               <div className="stats-grid">
                 <div className="stat-card">
-                  <div className="stat-icon stat-icon-blue">📅</div>
+                  <div className="stat-icon stat-icon-blue"><Calendar size={24} /></div>
                   <div className="stat-body">
                     <h3>Joining Date</h3>
                     <p className="stat-number">{student.joiningDate}</p>
                   </div>
                 </div>
                 <div className="stat-card">
-                  <div className="stat-icon stat-icon-purple">📋</div>
+                  <div className="stat-icon stat-icon-purple"><ClipboardList size={24} /></div>
                   <div className="stat-body">
                     <h3>Attendance</h3>
                     <p className="stat-number">{student.attendanceDays || 0} / {totalClasses}</p>
                   </div>
                 </div>
                 <div className="stat-card">
-                  <div className="stat-icon stat-icon-green">💰</div>
+                  <div className="stat-icon stat-icon-green"><Wallet size={24} /></div>
                   <div className="stat-body">
                     <h3>Fees Paid</h3>
                     <p className="stat-number">₹{feesPaid.toLocaleString()}</p>
                   </div>
                 </div>
                 <div className="stat-card">
-                  <div className="stat-icon stat-icon-red">⏳</div>
+                  <div className="stat-icon stat-icon-red"><BadgeAlert size={24} /></div>
                   <div className="stat-body">
                     <h3>Pending Fees</h3>
                     <p className="stat-number">₹{pendingFees.toLocaleString()}</p>
@@ -160,7 +161,7 @@ export default function ClientDashboard() {
                 <div className="group mb-6 hover:scale-[1.02] transition-all duration-300 cursor-default">
                   <div className="flex items-center justify-between mb-2.5">
                     <div className="flex items-center gap-2">
-                      <span className="text-[15px]">📅</span>
+                      <Calendar size={16} className="text-emerald-500" />
                       <span className="text-sm font-semibold text-gray-700">Attendance</span>
                     </div>
                     <span className="text-xs font-medium text-gray-400 tabular-nums">{student.attendanceDays || 0} / {totalClasses}</span>
@@ -185,7 +186,7 @@ export default function ClientDashboard() {
                 <div className="group hover:scale-[1.02] transition-all duration-300 cursor-default">
                   <div className="flex items-center justify-between mb-2.5">
                     <div className="flex items-center gap-2">
-                      <span className="text-[15px]">💳</span>
+                      <CreditCard size={16} className="text-blue-500" />
                       <span className="text-sm font-semibold text-gray-700">Fees</span>
                     </div>
                     <span className="text-xs font-medium text-gray-400 tabular-nums">₹{feesPaid.toLocaleString()} / ₹{totalFees.toLocaleString()}</span>
@@ -209,7 +210,7 @@ export default function ClientDashboard() {
               </div>
 
               <div className="card">
-                <h3 style={{ margin: "0 0 12px" }}>Student Details</h3>
+                <h3 style={{ margin: "0 0 12px" }}>Student Profile</h3>
                 <div className="detail-grid">
                   <div className="detail-item">
                     <span className="detail-label">Student ID</span>
