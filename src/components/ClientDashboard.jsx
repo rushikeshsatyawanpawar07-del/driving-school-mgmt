@@ -3,7 +3,7 @@ import { signOut } from "firebase/auth";
 import { useNavigate } from "react-router-dom";
 import { auth } from "../firebase";
 import { useAuth } from "../context/AuthContext";
-import { getStudents, getStudent } from "../services/studentService";
+import { getStudentByAuthUid } from "../services/studentService";
 import { Car, LayoutDashboard, Calendar, ClipboardList, Wallet, BadgeAlert, CreditCard } from "lucide-react";
 
 const COURSE_TOTAL_CLASSES = {
@@ -23,14 +23,8 @@ export default function ClientDashboard() {
     const load = async () => {
       setLoading(true);
       try {
-        const all = await getStudents();
-        const mine = all.find(
-          (s) => s.email === user?.email
-        );
-        if (mine) {
-          const detail = await getStudent(mine.id);
-          setStudent(detail);
-        }
+        const mine = await getStudentByAuthUid(user?.uid);
+        setStudent(mine);
       } catch { /* ignore */ }
       setLoading(false);
     };

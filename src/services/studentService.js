@@ -54,6 +54,13 @@ export async function getStudent(id) {
   return snap.exists() ? { id: snap.id, ...snap.data() } : null;
 }
 
+export async function getStudentByAuthUid(authUid) {
+  const q = query(collection(db, STUDENTS), where("clientAuthUid", "==", authUid));
+  const snap = await getDocs(q);
+  if (snap.empty) return null;
+  return { id: snap.docs[0].id, ...snap.docs[0].data() };
+}
+
 export async function getStudentByEmail(email) {
   const q = query(collection(db, STUDENTS), where("email", "==", email));
   const snap = await getDocs(q);
