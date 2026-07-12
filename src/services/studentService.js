@@ -70,8 +70,8 @@ export async function addStudent(data) {
     try {
       const authUser = await createAuthUser(data.email, password);
       authUid = authUser.uid;
-    } catch {
-      throw new Error("Failed to create client login account. Check if email is already registered.");
+    } catch (e) {
+      throw new Error(e.message || "Failed to create client login account");
     }
   }
 
@@ -116,7 +116,11 @@ export async function addStudent(data) {
 }
 
 export async function updateStudent(id, data) {
-  await updateDoc(doc(db, STUDENTS, id), data);
+  try {
+    await updateDoc(doc(db, STUDENTS, id), data);
+  } catch (e) {
+    throw new Error(e.message || "Failed to update student");
+  }
 }
 
 export async function deleteStudent(id) {

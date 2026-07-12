@@ -5,11 +5,12 @@ import { auth } from "../firebase";
 import { useAuth } from "../context/AuthContext";
 import { useNotification } from "../context/NotificationContext";
 import {
-  getStudents, addStudent, updateStudent, deleteStudent, getStudent, recordPayment, assignStudentToTeacher, resetStudentPassword,
+  getStudents, addStudent, updateStudent, deleteStudent, getStudent, recordPayment, assignStudentToTeacher,
 } from "../services/studentService";
 import {
   getTeachers, addTeacher, updateTeacher, deleteTeacher, toggleTeacherStatus,
 } from "../services/teacherService";
+import { generateInvoicePDF } from "../services/invoiceService";
 import {
   getInquiries, addInquiry, updateInquiry, deleteInquiry, checkFollowUps, markFollowUpSent,
 } from "../services/inquiryService";
@@ -17,7 +18,7 @@ import {
   LayoutDashboard, Users, GraduationCap, Link2, ClipboardList, Car, Wallet, BadgeAlert,
   CheckCircle, Bell, Calendar, TriangleAlert, Phone, Eye, Pencil, Trash2, User,
   Mail, BookOpen, CreditCard, Star, Sunrise, Sun, Sunset, Bike, CircleOff,
-  Key, Copy, Fingerprint, Clock
+  Copy, Fingerprint, Clock
 } from "lucide-react";
 
 export default function OwnerDashboard() {
@@ -153,20 +154,27 @@ export default function OwnerDashboard() {
     };
     delete payload.courseType; delete payload.totalClasses; delete payload.duration; delete payload.classDuration;
     try {
+      let studentId;
       if (selectedStudent) {
         await updateStudent(selectedStudent, payload);
+        studentId = selectedStudent;
         addNotification("Student updated");
       } else {
-        await addStudent(payload);
+        const saved = await addStudent(payload);
+        studentId = saved.id;
         addNotification("Student added");
       }
+      try {
+        const latest = await getStudent(studentId);
+        if (latest) await generateInvoicePDF(latest, teachers);
+      } catch { /* invoice generation failed silently */ }
       setForm({ name: "", phone: "", altPhone: "", email: "", address: "", course: "", joiningDate: "", assignedTeacherId: "", batch: "", vehicleType: "", courseFees: 0, feesPaid: 0, pendingFees: 0, courseType: "", totalClasses: "", duration: "", classDuration: "" });
       setSelectedCourse(null);
       setCourseSearch("");
       setSelectedStudent(null);
       setView("students");
       loadStudents();
-    } catch { addNotification("Failed to save student", "error"); }
+    } catch (e) { addNotification(e?.message || "Failed to save student", "error"); }
     setSaving(false);
   };
 
@@ -648,13 +656,15 @@ export default function OwnerDashboard() {
             <div className="card">
               <div className="card-header">
                 <h2>All Students</h2>
-                <button className="btn btn-primary" onClick={() => {
-                  setForm({ name: "", phone: "", course: "", joiningDate: "", totalFees: "" });
-                  setSelectedStudent(null);
-                  setView("addStudent");
-                }}>
-                  + Add Student
-                </button>
+                <div style={{ display: "flex", gap: 8 }}>
+                  <button className="btn btn-primary" onClick={() => {
+                    setForm({ name: "", phone: "", course: "", joiningDate: "", totalFees: "" });
+                    setSelectedStudent(null);
+                    setView("addStudent");
+                  }}>
+                    + Add Student
+                  </button>
+                </div>
               </div>
 
               <div className="search-bar">
@@ -715,16 +725,6 @@ export default function OwnerDashboard() {
                                   {s.studentId && (
                                     <button className="btn btn-icon" title="Copy Student ID" onClick={() => { navigator.clipboard.writeText(s.studentId); addNotification("Student ID copied!"); }}><Copy size={18} /></button>
                                   )}
-                                  {s.email && (
-                                    <button className="btn btn-icon" title="Reset Password" onClick={async () => {
-                                      if (!window.confirm(`Reset password for ${s.name}? A new Student ID will be generated.`)) return;
-                                      try {
-                                        const { newStudentId } = await resetStudentPassword(s.studentId);
-                                        addNotification(`Password reset. New Student ID: ${newStudentId}`);
-                                        loadStudents();
-                                      } catch { addNotification("Failed to reset password", "error"); }
-                                    }}><Key size={18} /></button>
-                                  )}
                                   <button className="btn btn-icon btn-delete" title="Delete" disabled={deleting === s.id} onClick={() => {
                                     if (window.confirm(`Delete ${s.name}?`)) handleDelete(s.id);
                                   }}><Trash2 size={18} /></button>
@@ -754,16 +754,6 @@ export default function OwnerDashboard() {
                             <button className="btn btn-sm btn-primary" onClick={() => handleEdit(s.id)}><Pencil size={16} /> Edit</button>
                             {s.studentId && (
                               <button className="btn btn-sm" onClick={() => { navigator.clipboard.writeText(s.studentId); addNotification("Student ID copied!"); }}><Copy size={16} /> Copy ID</button>
-                            )}
-                            {s.email && (
-                              <button className="btn btn-sm" style={{ background: "var(--orange)", color: "#fff" }} onClick={async () => {
-                                if (!window.confirm(`Reset password for ${s.name}? A new Student ID will be generated.`)) return;
-                                try {
-                                  const { newStudentId } = await resetStudentPassword(s.studentId);
-                                  addNotification(`Password reset. New Student ID: ${newStudentId}`);
-                                  loadStudents();
-                                } catch { addNotification("Failed to reset password", "error"); }
-                              }}><Key size={16} /> Reset</button>
                             )}
                             <button className="btn btn-sm btn-danger" disabled={deleting === s.id} onClick={() => { if (window.confirm(`Delete ${s.name}?`)) handleDelete(s.id); }}><Trash2 size={16} /> Delete</button>
                           </div>
