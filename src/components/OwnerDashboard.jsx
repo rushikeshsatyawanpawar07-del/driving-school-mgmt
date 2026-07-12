@@ -167,7 +167,7 @@ export default function OwnerDashboard() {
       try {
         const latest = await getStudent(studentId);
         if (latest) await generateInvoicePDF(latest, teachers);
-      } catch { /* invoice generation failed silently */ }
+      } catch { addNotification("Invoice download failed, student was saved", "error"); }
       setForm({ name: "", phone: "", altPhone: "", email: "", address: "", course: "", joiningDate: "", assignedTeacherId: "", batch: "", vehicleType: "", courseFees: 0, feesPaid: 0, pendingFees: 0, courseType: "", totalClasses: "", duration: "", classDuration: "" });
       setSelectedCourse(null);
       setCourseSearch("");

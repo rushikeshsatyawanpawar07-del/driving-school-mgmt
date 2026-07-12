@@ -53,25 +53,15 @@ export async function generateInvoicePDF(student, teachers) {
   const dark = [50, 50, 50];
 
   // --- Header ---
-  // Try loading logo
+  // Load logo
   try {
-    const img = new Image();
-    img.src = "/logo.png";
-    await new Promise((resolve, reject) => {
-      img.onload = () => {
-        try {
-          const canvas = document.createElement("canvas");
-          canvas.width = img.naturalWidth;
-          canvas.height = img.naturalHeight;
-          const ctx = canvas.getContext("2d");
-          ctx.drawImage(img, 0, 0);
-          const dataUrl = canvas.toDataURL("image/png");
-          docPdf.addImage(dataUrl, "PNG", margin, 15, 28, 28);
-        } catch (e) { /* skip logo */ }
-        resolve();
-      };
-      img.onerror = resolve;
-      setTimeout(resolve, 500);
+    const resp = await fetch("/logo.png");
+    const blob = await resp.blob();
+    const reader = new FileReader();
+    await new Promise((resolve) => {
+      reader.onload = () => { docPdf.addImage(reader.result, "PNG", margin, 15, 28, 28); resolve(); };
+      reader.onerror = resolve;
+      reader.readAsDataURL(blob);
     });
   } catch { /* skip logo */ }
 
