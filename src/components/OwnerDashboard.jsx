@@ -600,7 +600,6 @@ export default function OwnerDashboard() {
                           <div className="followup-row">
                             <span className="followup-label"><Calendar size={14} /></span>
                             <span>{inq.inquiryDate}</span>
-                            <span>{inq.inquiryDate}</span>
                           </div>
                         </div>
                         <div className="followup-actions">

@@ -7,10 +7,10 @@ import { getStudentByAuthUid } from "../services/studentService";
 import { Car, LayoutDashboard, Calendar, ClipboardList, Wallet, BadgeAlert, CreditCard } from "lucide-react";
 
 const COURSE_TOTAL_CLASSES = {
-  "Light Motor Vehicle (LMV)": 21,
-  "Heavy Motor Vehicle (HMV)": 31,
-  "Motorcycle With Gear": 15,
-  "Motorcycle Without Gear": 15,
+  "Two Wheeler Training Only": 15,
+  "Two Wheeler Training + License": 15,
+  "Four Wheeler Training Only": 30,
+  "Four Wheeler Training + License": 30,
 };
 
 export default function ClientDashboard() {

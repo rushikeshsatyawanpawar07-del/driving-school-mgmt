@@ -32,7 +32,7 @@ service cloud.firestore {
     }
 
     // ── students ──
-    // Owner: full access. Teacher: read/write assigned students. Client: read own record.
+    // Owner: full. Teacher: read/write assigned. Client: read own.
     match /students/{docId} {
       allow read: if isAuth() && (
         isOwner() ||

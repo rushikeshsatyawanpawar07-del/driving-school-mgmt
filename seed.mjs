@@ -15,7 +15,7 @@ const db = getFirestore(app);
 
 const first = ["Aarav","Priya","Rohit","Ananya","Vikram","Neha","Arjun","Kavita","Siddharth","Isha","Raj","Maya","Karan","Sara","Aditya","Nisha","Rahul","Pooja","Amit","Deepa"];
 const last = ["Sharma","Patel","Singh","Gupta","Joshi","Verma","Kumar","Desai","Nair","Mehta","Reddy","Kapoor","Malhotra","Bose","Chopra","Agarwal","Sethi","Rao","Iyer","Menon"];
-const courses = ["Light Motor Vehicle (LMV)","Heavy Motor Vehicle (HMV)","Motorcycle With Gear","Motorcycle Without Gear"];
+const courses = ["Two Wheeler Training Only","Two Wheeler Training + License","Four Wheeler Training Only","Four Wheeler Training + License"];
 const batches = ["Morning", "Afternoon", "Evening"];
 
 async function getLastStudentId() {
