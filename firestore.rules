@@ -7,7 +7,8 @@ service cloud.firestore {
     }
 
     function getRole(uid) {
-      return get(/databases/$(database)/documents/user/$(uid)).data.role;
+      let path = /databases/$(database)/documents/user/$(uid);
+      return exists(path) ? get(path).data.role : null;
     }
 
     function isOwner() {
@@ -26,7 +27,7 @@ service cloud.firestore {
     // Owner: full access. User: read own doc.
     match /user/{uid} {
       allow read: if isAuth() && (isOwner() || request.auth.uid == uid);
-      allow create: if isAuth() && (isOwner() || request.auth.uid == uid);
+      allow create: if isOwner();
       allow update: if isOwner();
       allow delete: if isOwner();
     }
@@ -40,10 +41,7 @@ service cloud.firestore {
         (isClient() && resource.data.clientAuthUid == request.auth.uid)
       );
       allow create: if isOwner();
-      allow update: if isOwner() || (isTeacher() && (
-        resource.data.assignedTeacherId == request.auth.uid ||
-        request.resource.data.assignedTeacherId == request.auth.uid
-      ));
+      allow update: if isOwner() || (isTeacher() && resource.data.assignedTeacherId == request.auth.uid);
       allow delete: if isOwner();
     }
 
