@@ -41,26 +41,16 @@ async function signInAsTeacher(email, storedPassword, newPassword) {
   throw new Error(lastError || "Could not sign in");
 }
 
-async function sendVerifyAndChangeEmail(idToken, newEmail) {
-  const res = await fetch(
-    `https://identitytoolkit.googleapis.com/v1/accounts:sendOobCode?key=${API_KEY}`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ requestType: "VERIFY_AND_CHANGE_EMAIL", idToken, newEmail }),
-    }
-  );
-  const data = await res.json();
-  if (data.error) throw new Error(data.error.message);
-}
-
-async function updateAuthPassword(idToken, newPassword) {
+async function updateAuthAccount(idToken, newEmail, newPassword) {
+  const body = { idToken, returnSecureToken: true };
+  if (newEmail) body.email = newEmail;
+  if (newPassword) body.password = newPassword;
   const res = await fetch(
     `https://identitytoolkit.googleapis.com/v1/accounts:update?key=${API_KEY}`,
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ idToken, password: newPassword, returnSecureToken: true }),
+      body: JSON.stringify(body),
     }
   );
   const data = await res.json();
@@ -130,14 +120,9 @@ export async function updateTeacher(id, data) {
       throw new Error("Failed to sign in as teacher: " + (e.message || "check password"));
     }
     try {
-      if (emailChanged) {
-        await sendVerifyAndChangeEmail(idToken, data.email);
-        updateFields.email = data.email;
-      }
-      if (passwordChanged) {
-        await updateAuthPassword(idToken, data.password);
-        updateFields.password = data.password;
-      }
+      await updateAuthAccount(idToken, emailChanged ? data.email : null, passwordChanged ? data.password : null);
+      if (emailChanged) updateFields.email = data.email;
+      if (passwordChanged) updateFields.password = data.password;
     } catch (e) {
       throw new Error("Failed to update login account: " + (e.message || "unknown error"));
     }
