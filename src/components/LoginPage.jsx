@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
 import { auth, db } from "../firebase";
+import { SCHOOL } from "../config/schoolConfig";
 
 
 const roles = [
@@ -68,8 +69,8 @@ export default function LoginPage() {
     <div className="login-page">
       <div className="login-card">
         <div className="login-header">
-            <div className="login-icon" style={{ display: "flex", justifyContent: "center" }}><img src="/logo.png" alt="DriveSchool" style={{ width: 80, height: 80, objectFit: "contain" }} /></div>
-          <h1>Driving School</h1>
+            <div className="login-icon" style={{ display: "flex", justifyContent: "center" }}><img src="/logo.png" alt={SCHOOL.shortName} style={{ width: 80, height: 80, objectFit: "contain" }} /></div>
+          <h1>{SCHOOL.shortName}</h1>
           <p>Sign in to your account</p>
         </div>
 

@@ -3,10 +3,12 @@ import {
   getDocs, getDoc, query, orderBy, where, serverTimestamp, setDoc
 } from "firebase/firestore";
 import { db } from "../firebase";
+import { SCHOOL } from "../config/schoolConfig";
 
 const STUDENTS = "students";
 const USERS = "user";
 const API_KEY = "AIzaSyC2TuLS8tZv-7n_1K23-2RlGBGojXf52ik";
+const PREFIX = SCHOOL.studentIdPrefix;
 
 async function createAuthUser(email, password) {
   const res = await fetch(
@@ -25,11 +27,11 @@ async function createAuthUser(email, password) {
 export async function getNextStudentId() {
   const q = query(collection(db, STUDENTS), orderBy("createdAt", "desc"));
   const snap = await getDocs(q);
-  if (snap.empty) return "DS1001";
+  if (snap.empty) return `${PREFIX}1001`;
   const last = snap.docs[0].data().studentId;
-  if (!last) return "DS1001";
-  const num = parseInt(last.replace("DS", ""), 10);
-  return `DS${num + 1}`;
+  if (!last) return `${PREFIX}1001`;
+  const num = parseInt(last.replace(PREFIX, ""), 10);
+  return `${PREFIX}${num + 1}`;
 }
 
 export async function getStudents() {

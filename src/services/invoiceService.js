@@ -2,13 +2,7 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "../firebase";
-
-const SCHOOL = {
-  name: "Safe Wheels Driving School",
-  address: "123, Driving Academy Road, Near City Square, Mumbai - 400001",
-  phone: "+91 98765 43210",
-  email: "info@safewheels.com",
-};
+import { SCHOOL } from "../config/schoolConfig";
 
 const COUNTER_DOC = doc(db, "metadata", "invoiceCounter");
 
@@ -21,7 +15,7 @@ function formatDate() {
 }
 
 function formatCurrency(n) {
-  return "Rs. " + Number(n || 0).toLocaleString("en-IN");
+  return SCHOOL.currency + Number(n || 0).toLocaleString(SCHOOL.locale);
 }
 
 async function getNextInvoiceNumber() {

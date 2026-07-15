@@ -13,7 +13,7 @@ export default defineConfig({
       manifest: {
         name: 'Driving School Management',
         short_name: 'DriveSchool',
-        description: 'Driving school management system for students, teachers, and inquiries',
+        description: 'Driving school management system',
         start_url: '/',
         display: 'standalone',
         background_color: '#f9fafb',

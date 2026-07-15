@@ -1,15 +1,13 @@
 import { useState, useEffect, useCallback } from "react";
 import { signOut } from "firebase/auth";
 import { useNavigate } from "react-router-dom";
-import { doc, updateDoc } from "firebase/firestore";
-import { auth, db } from "../firebase";
+import { auth } from "../firebase";
 import { useAuth } from "../context/AuthContext";
 import { useNotification } from "../context/NotificationContext";
 import { getStudentsByTeacher } from "../services/studentService";
 import { markAttendance, getAttendanceForDate } from "../services/attendanceService";
-import { LayoutDashboard, Users, ClipboardList, FileText, Calendar, Car, Eye, Phone, User, BookOpen } from "lucide-react";
-
-const weekDays = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+import { LayoutDashboard, Users, ClipboardList, Calendar, Car, Phone, User, BookOpen } from "lucide-react";
+import { SCHOOL } from "../config/schoolConfig";
 
 export default function TeacherDashboard() {
   const { user } = useAuth();
@@ -22,17 +20,7 @@ export default function TeacherDashboard() {
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split("T")[0]);
   const [attendanceMap, setAttendanceMap] = useState({});
   const [markingId, setMarkingId] = useState(null);
-  const [selectedStudent, setSelectedStudent] = useState(null);
-  const [noteText, setNoteText] = useState("");
-  const [savingNote, setSavingNote] = useState(false);
-  const [schedule, setSchedule] = useState(() => {
-    const s = {};
-    weekDays.forEach((d) => { s[d] = ""; });
-    return s;
-  });
   const [search, setSearch] = useState("");
-  const [scheduleDay, setScheduleDay] = useState("Monday");
-  const [scheduleText, setScheduleText] = useState("");
 
   const loadStudents = useCallback(async () => {
     setLoading(true);
@@ -72,26 +60,6 @@ export default function TeacherDashboard() {
     setMarkingId(null);
   };
 
-  const handleSaveNote = async () => {
-    if (!selectedStudent || !noteText.trim()) {
-      addNotification("Enter a note", "error");
-      return;
-    }
-    setSavingNote(true);
-    try {
-      await updateDoc(doc(db, "students", selectedStudent.id), { progressNote: noteText });
-      addNotification("Progress note saved");
-      setSelectedStudent((prev) => ({ ...prev, progressNote: noteText }));
-      loadStudents();
-    } catch { addNotification("Failed to save note", "error"); }
-    setSavingNote(false);
-  };
-
-  const handleSaveSchedule = () => {
-    setSchedule((prev) => ({ ...prev, [scheduleDay]: scheduleText }));
-    addNotification("Schedule updated");
-  };
-
   const handleLogout = async () => {
     await signOut(auth);
     navigate("/login", { replace: true });
@@ -101,8 +69,6 @@ export default function TeacherDashboard() {
     { key: "dashboard", label: "Dashboard", icon: LayoutDashboard },
     { key: "students", label: "Students", icon: Users },
     { key: "attendance", label: "Attendance", icon: ClipboardList },
-    { key: "progress", label: "Progress Notes", icon: FileText },
-    { key: "schedule", label: "Schedule", icon: Calendar },
   ];
 
   return (
@@ -110,7 +76,7 @@ export default function TeacherDashboard() {
       <aside className={`sidebar ${sidebarOpen ? "open" : ""}`}>
         <div className="sidebar-brand">
           <span className="sidebar-logo"><Car size={28} /></span>
-          <span>DriveSchool</span>
+          <span>{SCHOOL.shortName}</span>
         </div>
         <nav className="sidebar-nav">
           {navItems.map((item) => (
@@ -146,8 +112,6 @@ export default function TeacherDashboard() {
             {view === "dashboard" && "Teacher Dashboard"}
             {view === "students" && "My Students"}
             {view === "attendance" && "Mark Attendance"}
-            {view === "progress" && "Progress Notes"}
-            {view === "schedule" && "My Schedule"}
           </h1>
           <div className="topbar-right">
             <span className="user-badge teacher-badge">Teacher</span>
@@ -193,7 +157,7 @@ export default function TeacherDashboard() {
               </div>
               <div className="card">
                 <h2>Welcome, {user?.name || "Teacher"}!</h2>
-                <p>View students, mark attendance, add progress notes, and manage your schedule.</p>
+                <p>View your students and mark attendance.</p>
               </div>
             </>
           )}
@@ -332,94 +296,6 @@ export default function TeacherDashboard() {
             </div>
           )}
 
-          {view === "progress" && (
-            <div className="card">
-              <h2>Student Progress Notes</h2>
-              {loading ? (
-                <div className="table-loader"><div className="spinner" /></div>
-              ) : students.length === 0 ? (
-                <div className="empty-state">No students available.</div>
-              ) : (
-                <>
-                  <div className="search-bar">
-                    <select
-                      value={selectedStudent?.id || ""}
-                      onChange={(e) => {
-                        const s = students.find((x) => x.id === e.target.value);
-                        setSelectedStudent(s || null);
-                        setNoteText(s?.progressNote || "");
-                      }}
-                    >
-                      <option value="">Select a student...</option>
-                      {students.map((s) => (
-                        <option key={s.id} value={s.id}>{s.name}</option>
-                      ))}
-                    </select>
-                  </div>
-                  {selectedStudent && (
-                    <div className="card" style={{ marginTop: 0, border: "1px solid var(--gray-200)" }}>
-                      <h3 style={{ fontSize: 16, marginBottom: 12 }}>{selectedStudent.name}</h3>
-                      <div className="form-group">
-                        <label>Progress Note</label>
-                        <textarea
-                          rows={4}
-                          value={noteText}
-                          onChange={(e) => setNoteText(e.target.value)}
-                          placeholder="Add notes about this student's progress..."
-                          style={{
-                            width: "100%", padding: "10px 14px", border: "1px solid var(--gray-300)",
-                            borderRadius: 8, fontSize: 14, fontFamily: "var(--font)", resize: "vertical",
-                          }}
-                        />
-                      </div>
-                      <button className="btn btn-primary" onClick={handleSaveNote} disabled={savingNote}>
-                        {savingNote ? "Saving..." : "Save Note"}
-                      </button>
-                    </div>
-                  )}
-                </>
-              )}
-            </div>
-          )}
-
-          {view === "schedule" && (
-            <div className="card">
-              <h2>Weekly Schedule</h2>
-              <div className="form-row" style={{ marginBottom: 16 }}>
-                <div className="form-group">
-                  <label>Day</label>
-                  <select value={scheduleDay} onChange={(e) => { setScheduleDay(e.target.value); setScheduleText(schedule[e.target.value] || ""); }}>
-                    {weekDays.map((d) => <option key={d} value={d}>{d}</option>)}
-                  </select>
-                </div>
-                <div className="form-group">
-                  <label>Schedule Info</label>
-                  <input value={scheduleText} onChange={(e) => setScheduleText(e.target.value)} placeholder="e.g. 10:00 AM - Beginner Lesson" />
-                </div>
-              </div>
-              <button className="btn btn-primary" onClick={handleSaveSchedule} style={{ marginBottom: 20 }}>
-                Save Schedule
-              </button>
-              <div className="table-wrapper">
-                <table className="data-table">
-                  <thead>
-                    <tr>
-                      <th>Day</th>
-                      <th>Activity</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {weekDays.map((d) => (
-                      <tr key={d}>
-                        <td className="td-name">{d}</td>
-                        <td>{schedule[d] || "—"}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
         </main>
       </div>
     </div>

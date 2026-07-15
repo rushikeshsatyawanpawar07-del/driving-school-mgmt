@@ -5,13 +5,7 @@ import { auth } from "../firebase";
 import { useAuth } from "../context/AuthContext";
 import { getStudentByAuthUid } from "../services/studentService";
 import { Car, LayoutDashboard, Calendar, ClipboardList, Wallet, BadgeAlert, CreditCard } from "lucide-react";
-
-const COURSE_TOTAL_CLASSES = {
-  "Two Wheeler Training Only": 15,
-  "Two Wheeler Training + License": 15,
-  "Four Wheeler Training Only": 30,
-  "Four Wheeler Training + License": 30,
-};
+import { SCHOOL, COURSE_TOTAL_CLASSES } from "../config/schoolConfig";
 
 export default function ClientDashboard() {
   const { user } = useAuth();
@@ -56,7 +50,7 @@ export default function ClientDashboard() {
       <aside className={`sidebar ${sidebarOpen ? "open" : ""}`}>
         <div className="sidebar-brand">
           <span className="sidebar-logo"><Car size={28} /></span>
-          <span>DriveSchool</span>
+          <span>{SCHOOL.shortName}</span>
         </div>
         <nav className="sidebar-nav">
           <button className="sidebar-link active">

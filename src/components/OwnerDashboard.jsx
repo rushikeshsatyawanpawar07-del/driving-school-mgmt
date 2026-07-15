@@ -11,6 +11,7 @@ import {
   getTeachers, addTeacher, updateTeacher, deleteTeacher, toggleTeacherStatus,
 } from "../services/teacherService";
 import { generateInvoicePDF } from "../services/invoiceService";
+import { SCHOOL } from "../config/schoolConfig";
 import {
   getInquiries, addInquiry, updateInquiry, deleteInquiry, checkFollowUps, markFollowUpSent,
 } from "../services/inquiryService";
@@ -47,12 +48,7 @@ export default function OwnerDashboard() {
   const [showCourseDropdown, setShowCourseDropdown] = useState(false);
   const [selectedCourse, setSelectedCourse] = useState(null);
   const courseDropdownRef = useRef(null);
-  const courseOptions = [
-    { id: "Two Wheeler Training Only", label: "Two Wheeler Training Only", duration: "15 Days", totalClasses: "15", classDuration: "30 Minutes", price: 3000 },
-    { id: "Two Wheeler Training + License", label: "Two Wheeler Training + License", duration: "15 Days", totalClasses: "15", classDuration: "30 Minutes", price: 5000 },
-    { id: "Four Wheeler Training Only", label: "Four Wheeler Training Only", duration: "30 Days", totalClasses: "30", classDuration: "30 Minutes", price: 5000 },
-    { id: "Four Wheeler Training + License", label: "Four Wheeler Training + License", duration: "30 Days", totalClasses: "30", classDuration: "30 Minutes", price: 7000 },
-  ];
+  const courseOptions = SCHOOL.courses;
   const filteredCourses = useMemo(
     () => courseOptions.filter((c) => c.label.toLowerCase().includes(courseSearch.toLowerCase())),
     [courseSearch]
@@ -369,7 +365,14 @@ export default function OwnerDashboard() {
       const d = new Date(i.inquiryDate);
       d.setHours(0, 0, 0, 0);
       const diff = Math.floor((new Date() - d) / (1000 * 60 * 60 * 24));
-      return diff >= 7;
+      if (diff < 7) return false;
+      if (i.lastFollowUpSent) {
+        const sent = i.lastFollowUpSent.toDate ? i.lastFollowUpSent.toDate() : new Date(i.lastFollowUpSent);
+        sent.setHours(0, 0, 0, 0);
+        const daysSinceSent = Math.floor((new Date() - sent) / (1000 * 60 * 60 * 24));
+        if (daysSinceSent < 7) return false;
+      }
+      return true;
     }).length,
     today: inquiries.filter((i) => i.inquiryDate === todayStr).length,
     thisMonth: inquiries.filter((i) => i.inquiryDate?.startsWith(thisMonth)).length,
@@ -455,9 +458,10 @@ export default function OwnerDashboard() {
     try {
       await markFollowUpSent(inq.id);
       setFollowUpsDue((prev) => prev.filter((f) => f.id !== inq.id));
+      loadInquiries();
     } catch { /* silent */ }
     const phone = inq.phone.toString().replace(/\D/g, "");
-    const url = `https://wa.me/${phone}?text=${encodeURIComponent(`Hello ${inq.name}, you visited our driving school a few days ago. Are you still interested in joining our driving course?`)}`;
+    const url = `https://wa.me/${phone}?text=${encodeURIComponent(SCHOOL.whatsappMessage(inq.name))}`;
     window.open(url, "_blank", "noopener,noreferrer");
   };
 
@@ -488,7 +492,7 @@ export default function OwnerDashboard() {
       <aside className={`sidebar ${sidebarOpen ? "open" : ""}`}>
         <div className="sidebar-brand">
           <span className="sidebar-logo"><Car size={28} /></span>
-          <span>DriveSchool</span>
+          <span>{SCHOOL.shortName}</span>
         </div>
         <nav className="sidebar-nav">
           {navItems.map((item) => (
@@ -573,7 +577,7 @@ export default function OwnerDashboard() {
               </div>
               <div className="card">
                 <h2>Welcome back, {user?.name || "Owner"}!</h2>
-                <p>Manage your driving school from this dashboard. Use the sidebar to navigate.</p>
+                <p>Manage your driving school from this dashboard.</p>
               </div>
 
               {/* Follow-Up Required Section */}
