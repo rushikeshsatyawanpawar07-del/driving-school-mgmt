@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { auth } from "../firebase";
 import { useAuth } from "../context/AuthContext";
 import { getStudentByAuthUid } from "../services/studentService";
-import { Car, LayoutDashboard, Calendar, ClipboardList, Wallet, BadgeAlert, CreditCard } from "lucide-react";
+import { Car, LayoutDashboard, Calendar, ClipboardList, Wallet, BadgeAlert, CreditCard, GraduationCap, Phone } from "lucide-react";
 import { SCHOOL, COURSE_TOTAL_CLASSES } from "../config/schoolConfig";
 
 export default function ClientDashboard() {
@@ -229,6 +229,14 @@ export default function ClientDashboard() {
                     <span className={`badge ${student.status === "active" ? "badge-success" : "badge-danger"}`}>
                       {student.status}
                     </span>
+                  </div>
+                  <div className="detail-item">
+                    <span className="detail-label"><GraduationCap size={14} /> Assigned Teacher</span>
+                    <span className="detail-value">{student.teacherName || "—"}</span>
+                  </div>
+                  <div className="detail-item">
+                    <span className="detail-label"><Phone size={14} /> Teacher Phone</span>
+                    <span className="detail-value">{student.teacherPhone || "—"}</span>
                   </div>
                 </div>
               </div>

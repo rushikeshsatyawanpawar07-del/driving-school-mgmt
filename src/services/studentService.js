@@ -6,6 +6,7 @@ import { db } from "../firebase";
 import { SCHOOL } from "../config/schoolConfig";
 
 const STUDENTS = "students";
+const TEACHERS = "teachers";
 const USERS = "user";
 const API_KEY = "AIzaSyC2TuLS8tZv-7n_1K23-2RlGBGojXf52ik";
 const PREFIX = SCHOOL.studentIdPrefix;
@@ -154,7 +155,20 @@ export async function recordPayment(id, amount) {
 }
 
 export async function assignStudentToTeacher(studentId, teacherId) {
-  await updateDoc(doc(db, STUDENTS, studentId), { assignedTeacherId: teacherId || null });
+  let teacherName = null;
+  let teacherPhone = null;
+  if (teacherId) {
+    const tSnap = await getDoc(doc(db, TEACHERS, teacherId));
+    if (tSnap.exists()) {
+      teacherName = tSnap.data().name || null;
+      teacherPhone = tSnap.data().phone || null;
+    }
+  }
+  await updateDoc(doc(db, STUDENTS, studentId), {
+    assignedTeacherId: teacherId || null,
+    teacherName,
+    teacherPhone,
+  });
 }
 
 export async function resetStudentPassword(studentId) {
