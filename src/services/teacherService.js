@@ -22,40 +22,49 @@ async function createAuthUser(email, password) {
   return { uid: data.localId, email: data.email };
 }
 
-async function updateAuthAccount(currentEmail, storedPassword, newEmail, newPassword) {
-  let idToken = null;
-  const passwordsToTry = [storedPassword, newPassword].filter(Boolean);
-  const unique = [...new Set(passwordsToTry)];
+async function signInAsTeacher(email, storedPassword, newPassword) {
+  const passwordsToTry = [...new Set([storedPassword, newPassword].filter(Boolean))];
   let lastError = null;
-  for (const pw of unique) {
+  for (const pw of passwordsToTry) {
     const r = await fetch(
       `https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${API_KEY}`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: currentEmail, password: pw, returnSecureToken: true }),
+        body: JSON.stringify({ email, password: pw, returnSecureToken: true }),
       }
     );
     const d = await r.json();
-    if (!d.error) { idToken = d.idToken; break; }
+    if (!d.error) return d.idToken;
     lastError = d.error.message;
   }
-  if (!idToken) throw new Error(lastError || "Could not sign in to update auth account");
+  throw new Error(lastError || "Could not sign in");
+}
 
-  const body = { idToken, returnSecureToken: true };
-  if (newEmail) body.email = newEmail;
-  if (newPassword) body.password = newPassword;
+async function sendVerifyAndChangeEmail(idToken, newEmail) {
+  const res = await fetch(
+    `https://identitytoolkit.googleapis.com/v1/accounts:sendOobCode?key=${API_KEY}`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ requestType: "VERIFY_AND_CHANGE_EMAIL", idToken, newEmail }),
+    }
+  );
+  const data = await res.json();
+  if (data.error) throw new Error(data.error.message);
+}
 
-  const updateRes = await fetch(
+async function updateAuthPassword(idToken, newPassword) {
+  const res = await fetch(
     `https://identitytoolkit.googleapis.com/v1/accounts:update?key=${API_KEY}`,
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
+      body: JSON.stringify({ idToken, password: newPassword, returnSecureToken: true }),
     }
   );
-  const updateData = await updateRes.json();
-  if (updateData.error) throw new Error(updateData.error.message);
+  const data = await res.json();
+  if (data.error) throw new Error(data.error.message);
 }
 
 export async function getTeachers() {
@@ -114,11 +123,23 @@ export async function updateTeacher(id, data) {
   const oldPassword = oldData.password;
 
   if (emailChanged || passwordChanged) {
+    let idToken;
     try {
-      await updateAuthAccount(oldEmail, oldPassword, emailChanged ? data.email : null, passwordChanged ? data.password : null);
-      if (passwordChanged) updateFields.password = data.password;
+      idToken = await signInAsTeacher(oldEmail, oldPassword, data.password || undefined);
     } catch (e) {
-      throw new Error("Failed to update login account: " + (e.message || "check old password"));
+      throw new Error("Failed to sign in as teacher: " + (e.message || "check password"));
+    }
+    try {
+      if (emailChanged) {
+        await sendVerifyAndChangeEmail(idToken, data.email);
+        updateFields.email = data.email;
+      }
+      if (passwordChanged) {
+        await updateAuthPassword(idToken, data.password);
+        updateFields.password = data.password;
+      }
+    } catch (e) {
+      throw new Error("Failed to update login account: " + (e.message || "unknown error"));
     }
   }
 

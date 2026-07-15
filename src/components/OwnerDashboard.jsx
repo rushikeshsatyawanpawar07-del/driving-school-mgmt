@@ -278,8 +278,9 @@ export default function OwnerDashboard() {
     setSavingTeacher(true);
     try {
       if (selectedTeacher) {
+        const hadEmailChange = teacherForm.email && teacherForm.email !== teachers.find(t => t.id === selectedTeacher)?.email;
         await updateTeacher(selectedTeacher, teacherForm);
-        addNotification("Teacher updated");
+        addNotification(hadEmailChange ? "Teacher updated — verification email sent to new address" : "Teacher updated");
       } else {
         await addTeacher(teacherForm);
         addNotification("Teacher registered successfully");
