@@ -108,8 +108,10 @@ export async function updateTeacher(id, data) {
   if (emailChanged || passwordChanged) {
     try {
       await updateAuthAccount(oldEmail, oldPassword, emailChanged ? data.email : null, passwordChanged ? data.password : null);
-    } catch { /* if sign-in fails (e.g. password wrong), still save to Firestore */ }
-    if (passwordChanged) updateFields.password = data.password;
+      if (passwordChanged) updateFields.password = data.password;
+    } catch (e) {
+      throw new Error("Failed to update login account: " + (e.message || "check old password"));
+    }
   }
 
   await updateDoc(doc(db, TEACHERS, id), updateFields);
