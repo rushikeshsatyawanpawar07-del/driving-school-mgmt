@@ -208,6 +208,7 @@ export async function recordPayment(id, amount) {
   const remainingFees = student.totalFees - feesPaid;
   await updateDoc(doc(db, STUDENTS, id), {
     feesPaid,
+    pendingFees: remainingFees,
     remainingFees,
     status: remainingFees <= 0 ? "active" : student.status,
   });
