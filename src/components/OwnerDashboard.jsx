@@ -89,6 +89,8 @@ export default function OwnerDashboard() {
     name: "", phone: "", email: "", courseInterested: "", inquiryDate: new Date().toISOString().split("T")[0], notes: "",
   });
   const [followUpsDue, setFollowUpsDue] = useState([]);
+  const [assignSearch, setAssignSearch] = useState("");
+  const [assignTeacherFilter, setAssignTeacherFilter] = useState("");
   const [inquiryCourseSearch, setInquiryCourseSearch] = useState("");
   const [inquiryShowCourseDropdown, setInquiryShowCourseDropdown] = useState(false);
   const [inquirySelectedCourse, setInquirySelectedCourse] = useState(null);
@@ -1194,83 +1196,107 @@ export default function OwnerDashboard() {
               <h2>Assign Student to Teacher</h2>
               <p style={{ marginBottom: 20, color: "var(--gray-500)" }}>Select a student and assign them to a teacher.</p>
 
-              {students.length === 0 ? (
-                <div className="empty-state">No students found.</div>
-              ) : (
-                <div className="responsive-table-container">
-                  <div className="desktop-table">
-                    <div className="table-wrapper">
-                      <table className="data-table">
-                        <thead>
-                          <tr>
-                            <th>Student Name</th>
-                            <th>Course</th>
-                            <th>Current Teacher</th>
-                            <th>Assign Teacher</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {students.map((s) => {
-                            const assignedTeacher = teachers.find((x) => x.id === s.assignedTeacherId || x.uid === s.assignedTeacherId);
-                            return (
-                              <tr key={s.id}>
-                                <td className="td-name">{s.name}</td>
-                                <td><span className="badge badge-course">{s.course}</span></td>
-                                <td>{assignedTeacher ? assignedTeacher.name : <span style={{ color: "var(--gray-400)" }}>Not assigned</span>}</td>
-                                <td>
-                                  <select
-                                    value={s.assignedTeacherId || ""}
-                                    onChange={(e) => handleAssignTeacher(s.id, e.target.value)}
-                                    style={{
-                                      padding: "6px 10px", border: "1px solid var(--gray-300)",
-                                      borderRadius: 6, fontSize: 13, fontFamily: "var(--font)", background: "white",
-                                      maxWidth: 180,
-                                    }}
-                                  >
-                                    <option value="">— None —</option>
-                                    {teachers.filter((t) => t.status !== "inactive").map((t) => (
-                                      <option key={t.id} value={t.id}>{t.name}</option>
-                                    ))}
-                                  </select>
-                                </td>
-                              </tr>
-                            );
-                          })}
-                        </tbody>
-                      </table>
+              <div className="search-bar" style={{ marginBottom: 16 }}>
+                <input
+                  type="text"
+                  placeholder="Search by name or phone..."
+                  value={assignSearch}
+                  onChange={(e) => setAssignSearch(e.target.value)}
+                />
+                <select value={assignTeacherFilter} onChange={(e) => setAssignTeacherFilter(e.target.value)}>
+                  <option value="">All Teachers</option>
+                  {teachers.filter((t) => t.status !== "inactive").map((t) => (
+                    <option key={t.id} value={t.id}>{t.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              {(() => {
+                const filtered = students.filter((s) => {
+                  const matchSearch = s.name?.toLowerCase().includes(assignSearch.toLowerCase()) ||
+                                      s.phone?.includes(assignSearch);
+                  const matchTeacher = !assignTeacherFilter || s.assignedTeacherId === assignTeacherFilter;
+                  return matchSearch && matchTeacher;
+                });
+
+                return filtered.length === 0 ? (
+                  <div className="empty-state">No students match your filters.</div>
+                ) : (
+                  <div className="responsive-table-container">
+                    <div className="desktop-table">
+                      <div className="table-wrapper">
+                        <table className="data-table">
+                          <thead>
+                            <tr>
+                              <th>Student Name</th>
+                              <th>Course</th>
+                              <th>Current Teacher</th>
+                              <th>Assign Teacher</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {filtered.map((s) => {
+                              const assignedTeacher = teachers.find((x) => x.id === s.assignedTeacherId || x.uid === s.assignedTeacherId);
+                              return (
+                                <tr key={s.id}>
+                                  <td className="td-name">{s.name}</td>
+                                  <td><span className="badge badge-course">{s.course}</span></td>
+                                  <td>{assignedTeacher ? assignedTeacher.name : <span style={{ color: "var(--gray-400)" }}>Not assigned</span>}</td>
+                                  <td>
+                                    <select
+                                      value={s.assignedTeacherId || ""}
+                                      onChange={(e) => handleAssignTeacher(s.id, e.target.value)}
+                                      style={{
+                                        padding: "6px 10px", border: "1px solid var(--gray-300)",
+                                        borderRadius: 6, fontSize: 13, fontFamily: "var(--font)", background: "white",
+                                        maxWidth: 180,
+                                      }}
+                                    >
+                                      <option value="">— None —</option>
+                                      {teachers.filter((t) => t.status !== "inactive").map((t) => (
+                                        <option key={t.id} value={t.id}>{t.name}</option>
+                                      ))}
+                                    </select>
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                    <div className="mobile-cards">
+                      {filtered.map((s) => {
+                        const assignedTeacher = teachers.find((x) => x.id === s.assignedTeacherId || x.uid === s.assignedTeacherId);
+                        return (
+                          <div key={s.id} className="data-card">
+                            <div className="data-card-row"><span className="data-card-label"><User size={14} /></span><span className="data-card-value">{s.name}</span></div>
+                            <div className="data-card-row"><span className="data-card-label"><BookOpen size={14} /></span><span className="data-card-value">{s.course}</span></div>
+                            <div className="data-card-row"><span className="data-card-label"><GraduationCap size={14} /></span><span className="data-card-value">{assignedTeacher ? assignedTeacher.name : <span style={{ color: "var(--gray-400)" }}>Not assigned</span>}</span></div>
+                            <div className="data-card-row" style={{ flexDirection: "column", alignItems: "stretch", gap: 6 }}>
+                              <span className="data-card-label">Assign Teacher</span>
+                              <select
+                                value={s.assignedTeacherId || ""}
+                                onChange={(e) => handleAssignTeacher(s.id, e.target.value)}
+                                style={{
+                                  padding: "10px 12px", border: "1px solid var(--gray-300)",
+                                  borderRadius: 8, fontSize: 14, fontFamily: "var(--font)", background: "white",
+                                  width: "100%",
+                                }}
+                              >
+                                <option value="">— None —</option>
+                                {teachers.filter((t) => t.status !== "inactive").map((t) => (
+                                  <option key={t.id} value={t.id}>{t.name}</option>
+                                ))}
+                              </select>
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
-                  <div className="mobile-cards">
-                    {students.map((s) => {
-                      const assignedTeacher = teachers.find((x) => x.id === s.assignedTeacherId || x.uid === s.assignedTeacherId);
-                      return (
-                        <div key={s.id} className="data-card">
-                          <div className="data-card-row"><span className="data-card-label"><User size={14} /></span><span className="data-card-value">{s.name}</span></div>
-                          <div className="data-card-row"><span className="data-card-label"><BookOpen size={14} /></span><span className="data-card-value">{s.course}</span></div>
-                          <div className="data-card-row"><span className="data-card-label"><GraduationCap size={14} /></span><span className="data-card-value">{assignedTeacher ? assignedTeacher.name : <span style={{ color: "var(--gray-400)" }}>Not assigned</span>}</span></div>
-                          <div className="data-card-row" style={{ flexDirection: "column", alignItems: "stretch", gap: 6 }}>
-                            <span className="data-card-label">Assign Teacher</span>
-                            <select
-                              value={s.assignedTeacherId || ""}
-                              onChange={(e) => handleAssignTeacher(s.id, e.target.value)}
-                              style={{
-                                padding: "10px 12px", border: "1px solid var(--gray-300)",
-                                borderRadius: 8, fontSize: 14, fontFamily: "var(--font)", background: "white",
-                                width: "100%",
-                              }}
-                            >
-                              <option value="">— None —</option>
-                              {teachers.filter((t) => t.status !== "inactive").map((t) => (
-                                <option key={t.id} value={t.id}>{t.name}</option>
-                              ))}
-                            </select>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
+                );
+              })()}
             </div>
           )}
 
