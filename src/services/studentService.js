@@ -85,6 +85,16 @@ export async function addStudent(data) {
     }
   }
 
+  let teacherName = null;
+  let teacherPhone = null;
+  if (data.assignedTeacherId) {
+    const tSnap = await getDoc(doc(db, TEACHERS, data.assignedTeacherId));
+    if (tSnap.exists()) {
+      teacherName = tSnap.data().name || null;
+      teacherPhone = tSnap.data().phone || null;
+    }
+  }
+
   const studentData = {
     studentId,
     name: data.name,
@@ -102,6 +112,8 @@ export async function addStudent(data) {
     attendanceDays: 0,
     status: "active",
     assignedTeacherId: data.assignedTeacherId || null,
+    teacherName,
+    teacherPhone,
     batch: data.batch || "",
     vehicleType: data.vehicleType || "",
     createdAt: serverTimestamp(),
@@ -127,6 +139,53 @@ export async function addStudent(data) {
 
 export async function updateStudent(id, data) {
   try {
+    const oldSnap = await getDoc(doc(db, STUDENTS, id));
+    if (oldSnap.exists()) {
+      const oldData = oldSnap.data();
+
+      // Update auth email if changed
+      if (data.email && data.email !== oldData.email) {
+        const oldEmail = oldData.email;
+        const studentId = oldData.studentId;
+        if (oldEmail && studentId) {
+          try {
+            const signInRes = await fetch(
+              `https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${API_KEY}`,
+              {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ email: oldEmail, password: studentId, returnSecureToken: true }),
+              }
+            );
+            const signInData = await signInRes.json();
+            if (!signInData.error) {
+              await fetch(
+                `https://identitytoolkit.googleapis.com/v1/accounts:update?key=${API_KEY}`,
+                {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ idToken: signInData.idToken, email: data.email, returnSecureToken: true }),
+                }
+              );
+            }
+          } catch { /* auth update failed but Firestore update proceeds */ }
+        }
+      }
+
+      // Update teacher info if assignedTeacherId changed
+      if (data.assignedTeacherId !== undefined && data.assignedTeacherId !== oldData.assignedTeacherId) {
+        if (data.assignedTeacherId) {
+          const tSnap = await getDoc(doc(db, TEACHERS, data.assignedTeacherId));
+          if (tSnap.exists()) {
+            data.teacherName = tSnap.data().name || null;
+            data.teacherPhone = tSnap.data().phone || null;
+          }
+        } else {
+          data.teacherName = null;
+          data.teacherPhone = null;
+        }
+      }
+    }
     await updateDoc(doc(db, STUDENTS, id), data);
   } catch (e) {
     throw new Error(e.message || "Failed to update student");

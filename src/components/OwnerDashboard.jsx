@@ -1579,11 +1579,11 @@ export default function OwnerDashboard() {
                 <div className="form-row">
                   <div className="form-group">
                     <label>Email *</label>
-                    <input type="email" value={teacherForm.email} onChange={(e) => setTeacherForm({ ...teacherForm, email: e.target.value })} placeholder="teacher@example.com" disabled={!!selectedTeacher} />
+                    <input type="email" value={teacherForm.email} onChange={(e) => setTeacherForm({ ...teacherForm, email: e.target.value })} placeholder="teacher@example.com" />
                   </div>
                   <div className="form-group">
-                    <label>Password {selectedTeacher ? "(leave blank)" : "*"}</label>
-                    <input type="password" value={teacherForm.password} onChange={(e) => setTeacherForm({ ...teacherForm, password: e.target.value })} placeholder={selectedTeacher ? "New password" : "Password"} disabled={!!selectedTeacher} />
+                    <label>Password {selectedTeacher ? "(leave blank to keep current)" : "*"}</label>
+                    <input type="password" value={teacherForm.password} onChange={(e) => setTeacherForm({ ...teacherForm, password: e.target.value })} placeholder={selectedTeacher ? "New password" : "Password"} />
                   </div>
                 </div>
                 <div className="form-actions">

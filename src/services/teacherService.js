@@ -22,6 +22,34 @@ async function createAuthUser(email, password) {
   return { uid: data.localId, email: data.email };
 }
 
+async function updateAuthAccount(currentEmail, currentPassword, newEmail, newPassword) {
+  const signInRes = await fetch(
+    `https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${API_KEY}`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: currentEmail, password: currentPassword, returnSecureToken: true }),
+    }
+  );
+  const signInData = await signInRes.json();
+  if (signInData.error) throw new Error(signInData.error.message);
+
+  const body = { idToken: signInData.idToken, returnSecureToken: true };
+  if (newEmail) body.email = newEmail;
+  if (newPassword) body.password = newPassword;
+
+  const updateRes = await fetch(
+    `https://identitytoolkit.googleapis.com/v1/accounts:update?key=${API_KEY}`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    }
+  );
+  const updateData = await updateRes.json();
+  if (updateData.error) throw new Error(updateData.error.message);
+}
+
 export async function getTeachers() {
   const q = query(collection(db, TEACHERS), orderBy("name"));
   const snap = await getDocs(q);
@@ -39,6 +67,7 @@ export async function addTeacher(data) {
     experience: data.experience || "",
     licenseNumber: data.licenseNumber || "",
     email: data.email,
+    password: data.password,
     role: "teacher",
     status: "active",
     createdAt: serverTimestamp(),
@@ -62,7 +91,32 @@ export async function updateTeacher(id, data) {
   if (data.experience !== undefined) updateFields.experience = data.experience;
   if (data.licenseNumber !== undefined) updateFields.licenseNumber = data.licenseNumber;
   if (data.status !== undefined) updateFields.status = data.status;
+
+  const emailChanged = data.email !== undefined;
+  const passwordChanged = data.password !== undefined && data.password !== "";
+
+  if (emailChanged) {
+    updateFields.email = data.email;
+  }
+
+  const oldSnap = await getDoc(doc(db, TEACHERS, id));
+  if (!oldSnap.exists()) throw new Error("Teacher not found");
+  const oldData = oldSnap.data();
+  const oldEmail = oldData.email;
+  const oldPassword = oldData.password;
+
+  if (emailChanged || passwordChanged) {
+    try {
+      await updateAuthAccount(oldEmail, oldPassword, emailChanged ? data.email : null, passwordChanged ? data.password : null);
+    } catch { /* if sign-in fails (e.g. password wrong), still save to Firestore */ }
+    if (passwordChanged) updateFields.password = data.password;
+  }
+
   await updateDoc(doc(db, TEACHERS, id), updateFields);
+
+  if (emailChanged) {
+    await updateDoc(doc(db, USERS, id), { email: data.email });
+  }
 }
 
 export async function deleteTeacher(id) {
