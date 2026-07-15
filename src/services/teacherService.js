@@ -22,19 +22,27 @@ async function createAuthUser(email, password) {
   return { uid: data.localId, email: data.email };
 }
 
-async function updateAuthAccount(currentEmail, currentPassword, newEmail, newPassword) {
-  const signInRes = await fetch(
-    `https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${API_KEY}`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email: currentEmail, password: currentPassword, returnSecureToken: true }),
-    }
-  );
-  const signInData = await signInRes.json();
-  if (signInData.error) throw new Error(signInData.error.message);
+async function updateAuthAccount(currentEmail, storedPassword, newEmail, newPassword) {
+  let idToken = null;
+  const passwordsToTry = [storedPassword, newPassword].filter(Boolean);
+  const unique = [...new Set(passwordsToTry)];
+  let lastError = null;
+  for (const pw of unique) {
+    const r = await fetch(
+      `https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${API_KEY}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: currentEmail, password: pw, returnSecureToken: true }),
+      }
+    );
+    const d = await r.json();
+    if (!d.error) { idToken = d.idToken; break; }
+    lastError = d.error.message;
+  }
+  if (!idToken) throw new Error(lastError || "Could not sign in to update auth account");
 
-  const body = { idToken: signInData.idToken, returnSecureToken: true };
+  const body = { idToken, returnSecureToken: true };
   if (newEmail) body.email = newEmail;
   if (newPassword) body.password = newPassword;
 
