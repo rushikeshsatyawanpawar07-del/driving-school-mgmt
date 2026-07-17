@@ -8,8 +8,10 @@ export function BranchProvider({ children }) {
   const [branches, setBranches] = useState([]);
   const [branchesLoaded, setBranchesLoaded] = useState(false);
   const [selectedBranch, setSelectedBranch] = useState(() => {
-    const saved = localStorage.getItem("selectedBranch");
-    return saved ? JSON.parse(saved) : null;
+    try {
+      const saved = localStorage.getItem("selectedBranch");
+      return saved ? JSON.parse(saved) : null;
+    } catch { return null; }
   });
 
   useEffect(() => {
@@ -25,11 +27,13 @@ export function BranchProvider({ children }) {
   }, []);
 
   useEffect(() => {
-    if (selectedBranch) {
-      localStorage.setItem("selectedBranch", JSON.stringify(selectedBranch));
-    } else {
-      localStorage.removeItem("selectedBranch");
-    }
+    try {
+      if (selectedBranch) {
+        localStorage.setItem("selectedBranch", JSON.stringify(selectedBranch));
+      } else {
+        localStorage.removeItem("selectedBranch");
+      }
+    } catch { /* localStorage unavailable (e.g. private browsing) */ }
   }, [selectedBranch]);
 
   return (
