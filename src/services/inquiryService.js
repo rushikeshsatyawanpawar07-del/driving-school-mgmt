@@ -6,8 +6,10 @@ import { db } from "../firebase";
 
 const INQUIRIES = "inquiries";
 
-export async function getInquiries() {
-  const q = query(collection(db, INQUIRIES), orderBy("createdAt", "desc"));
+export async function getInquiries(branchId) {
+  const constraints = [orderBy("createdAt", "desc")];
+  if (branchId) constraints.unshift(where("branchId", "==", branchId));
+  const q = query(collection(db, INQUIRIES), ...constraints);
   const snap = await getDocs(q);
   return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
 }
@@ -26,6 +28,7 @@ export async function addInquiry(data) {
     courseInterested: data.courseInterested || "",
     inquiryDate,
     notes: data.notes || "",
+    branchId: data.branchId || null,
     createdAt: serverTimestamp(),
   });
   return docRef.id;

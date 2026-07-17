@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { auth } from "../firebase";
 import { useAuth } from "../context/AuthContext";
 import { useNotification } from "../context/NotificationContext";
+import { useBranch } from "../context/BranchContext";
 import { getStudentsByTeacher } from "../services/studentService";
 import { markAttendance, getAttendanceForDate } from "../services/attendanceService";
 import { LayoutDashboard, Users, ClipboardList, Calendar, Car, Phone, User, BookOpen } from "lucide-react";
@@ -12,6 +13,7 @@ import { SCHOOL } from "../config/schoolConfig";
 export default function TeacherDashboard() {
   const { user } = useAuth();
   const { addNotification } = useNotification();
+  const { selectedBranch } = useBranch();
   const navigate = useNavigate();
   const [view, setView] = useState("dashboard");
   const [students, setStudents] = useState([]);
@@ -25,11 +27,11 @@ export default function TeacherDashboard() {
   const loadStudents = useCallback(async () => {
     setLoading(true);
       try {
-        const data = user?.uid ? await getStudentsByTeacher(user.uid) : [];
+        const data = user?.uid ? await getStudentsByTeacher(user.uid, selectedBranch?.id) : [];
         setStudents(data);
       } catch { addNotification("Failed to load students", "error"); }
     setLoading(false);
-  }, [addNotification]);
+  }, [addNotification, user, selectedBranch]);
 
   useEffect(() => { loadStudents(); }, [loadStudents]);
 

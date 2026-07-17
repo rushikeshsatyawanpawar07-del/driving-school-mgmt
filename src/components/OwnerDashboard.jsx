@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { auth } from "../firebase";
 import { useAuth } from "../context/AuthContext";
 import { useNotification } from "../context/NotificationContext";
+import { useBranch } from "../context/BranchContext";
 import {
   getStudents, addStudent, updateStudent, deleteStudent, getStudent, recordPayment, assignStudentToTeacher,
 } from "../services/studentService";
@@ -12,6 +13,7 @@ import {
 } from "../services/teacherService";
 import { generateInvoicePDF } from "../services/invoiceService";
 import { SCHOOL } from "../config/schoolConfig";
+import SeedBranches from "./SeedBranches";
 import {
   getInquiries, addInquiry, updateInquiry, deleteInquiry, checkFollowUps, markFollowUpSent,
 } from "../services/inquiryService";
@@ -25,6 +27,7 @@ import {
 export default function OwnerDashboard() {
   const { user } = useAuth();
   const { addNotification } = useNotification();
+  const { selectedBranch, setSelectedBranch, branches, branchesLoaded } = useBranch();
   const navigate = useNavigate();
   const [view, setView] = useState("dashboard");
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -101,11 +104,11 @@ export default function OwnerDashboard() {
   const loadStudents = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await getStudents();
+      const data = await getStudents(selectedBranch?.id);
       setStudents(data);
     } catch { addNotification("Failed to load students", "error"); }
     setLoading(false);
-  }, [addNotification]);
+  }, [addNotification, selectedBranch]);
 
   useEffect(() => { loadStudents(); }, [loadStudents]);
 
@@ -149,6 +152,7 @@ export default function OwnerDashboard() {
       pendingFees: pf,
       totalFees: cf,
       remainingFees: pf,
+      branchId: selectedBranch?.id || null,
     };
     delete payload.courseType; delete payload.totalClasses; delete payload.duration; delete payload.classDuration;
     try {
@@ -254,11 +258,11 @@ export default function OwnerDashboard() {
   const loadTeachers = useCallback(async () => {
     setTeachersLoading(true);
     try {
-      const data = await getTeachers();
+      const data = await getTeachers(selectedBranch?.id);
       setTeachers(data);
     } catch { addNotification("Failed to load teachers", "error"); }
     setTeachersLoading(false);
-  }, [addNotification]);
+  }, [addNotification, selectedBranch]);
 
   useEffect(() => {
     if (["teachers", "addTeacher", "students", "addStudent", "viewStudent", "assign"].includes(view))
@@ -281,7 +285,7 @@ export default function OwnerDashboard() {
         await updateTeacher(selectedTeacher, teacherForm);
         addNotification("Teacher updated");
       } else {
-        await addTeacher(teacherForm);
+        await addTeacher({ ...teacherForm, branchId: selectedBranch?.id || null });
         addNotification("Teacher registered successfully");
       }
       setTeacherForm({ name: "", phone: "", address: "", experience: "", licenseNumber: "", email: "", password: "", status: "active" });
@@ -341,11 +345,11 @@ export default function OwnerDashboard() {
   const loadInquiries = useCallback(async () => {
     setInquiriesLoading(true);
     try {
-      const data = await getInquiries();
+      const data = await getInquiries(selectedBranch?.id);
       setInquiries(data);
     } catch { addNotification("Failed to load inquiries", "error"); }
     setInquiriesLoading(false);
-  }, [addNotification]);
+  }, [addNotification, selectedBranch]);
 
   useEffect(() => {
     if (["inquiries", "addInquiry", "viewInquiry", "dashboard"].includes(view)) loadInquiries();
@@ -402,7 +406,7 @@ export default function OwnerDashboard() {
         await updateInquiry(selectedInquiry, inquiryForm);
         addNotification("Inquiry updated");
       } else {
-        await addInquiry(inquiryForm);
+        await addInquiry({ ...inquiryForm, branchId: selectedBranch?.id || null });
         addNotification("Inquiry added");
       }
       setInquiryForm({ name: "", phone: "", email: "", courseInterested: "", inquiryDate: new Date().toISOString().split("T")[0], notes: "" });
@@ -491,12 +495,17 @@ export default function OwnerDashboard() {
 
   return (
     <div className="app-layout">
-      <aside className={`sidebar ${sidebarOpen ? "open" : ""}`}>
-        <div className="sidebar-brand">
-          <span className="sidebar-logo"><Car size={28} /></span>
-          <span>{SCHOOL.shortName}</span>
-        </div>
-        <nav className="sidebar-nav">
+        <aside className={`sidebar ${sidebarOpen ? "open" : ""}`}>
+          <div className="sidebar-brand">
+            <span className="sidebar-logo"><Car size={28} /></span>
+            <span>{SCHOOL.shortName}</span>
+          </div>
+          {selectedBranch && (
+            <div style={{ padding: "8px 16px", fontSize: 13, color: "var(--gray-500)" }}>
+              Branch: <strong>{selectedBranch.name}</strong>
+            </div>
+          )}
+          <nav className="sidebar-nav">
           {navItems.map((item) => (
             <button
               key={item.key}
@@ -540,6 +549,20 @@ export default function OwnerDashboard() {
             {view === "viewInquiry" && "Inquiry Details"}
           </h1>
           <div className="topbar-right">
+            {branches.length > 0 && (
+              <select
+                value={selectedBranch?.id || ""}
+                onChange={(e) => {
+                  const b = branches.find((x) => x.id === e.target.value);
+                  if (b) setSelectedBranch(b);
+                }}
+                style={{ marginRight: 12, padding: "4px 8px", borderRadius: 6, border: "1px solid var(--gray-300)", fontSize: 14 }}
+              >
+                {branches.map((b) => (
+                  <option key={b.id} value={b.id}>{b.name}</option>
+                ))}
+              </select>
+            )}
             <span className="user-badge owner-badge">Owner</span>
           </div>
         </header>
@@ -577,6 +600,11 @@ export default function OwnerDashboard() {
                   </div>
                 </div>
               </div>
+              {branches.length === 0 && branchesLoaded && (
+                <div className="card" style={{ marginBottom: 16, borderLeft: "4px solid var(--warning)" }}>
+                  <SeedBranches onDone={() => window.location.reload()} />
+                </div>
+              )}
               <div className="card">
                 <h2>Welcome back, {user?.name || "Owner"}!</h2>
                 <p>Manage your driving school from this dashboard.</p>

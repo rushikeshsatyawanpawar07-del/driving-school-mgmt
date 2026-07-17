@@ -1,6 +1,6 @@
 import {
   collection, updateDoc, deleteDoc, doc,
-  getDocs, getDoc, query, orderBy, setDoc, serverTimestamp
+  getDocs, getDoc, query, orderBy, where, setDoc, serverTimestamp
 } from "firebase/firestore";
 import { db } from "../firebase";
 
@@ -57,8 +57,10 @@ async function updateAuthAccount(idToken, newEmail, newPassword) {
   if (data.error) throw new Error(data.error.message);
 }
 
-export async function getTeachers() {
-  const q = query(collection(db, TEACHERS), orderBy("name"));
+export async function getTeachers(branchId) {
+  const constraints = [orderBy("name")];
+  if (branchId) constraints.unshift(where("branchId", "==", branchId));
+  const q = query(collection(db, TEACHERS), ...constraints);
   const snap = await getDocs(q);
   return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
 }
@@ -75,6 +77,7 @@ export async function addTeacher(data) {
     licenseNumber: data.licenseNumber || "",
     email: data.email,
     password: data.password,
+    branchId: data.branchId || null,
     role: "teacher",
     status: "active",
     createdAt: serverTimestamp(),
@@ -85,6 +88,8 @@ export async function addTeacher(data) {
     name: data.name,
     email: data.email,
     role: "teacher",
+    branchId: data.branchId || null,
+    accessibleBranchIds: data.branchId ? [data.branchId] : [],
   });
 
   return uid;

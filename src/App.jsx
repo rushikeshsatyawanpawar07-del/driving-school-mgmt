@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import { enableNetwork, disableNetwork } from "firebase/firestore";
 import { AuthProvider } from "./context/AuthContext";
+import { BranchProvider } from "./context/BranchContext";
 import { NotificationProvider } from "./context/NotificationContext";
 import ProtectedRoute from "./components/ProtectedRoute";
 import LoginPage from "./components/LoginPage";
@@ -57,6 +58,7 @@ function ConnectivityBanner() {
 export default function App() {
   return (
     <AuthProvider>
+      <BranchProvider>
       <NotificationProvider>
         <ConnectivityBanner />
         <Routes>
@@ -88,6 +90,7 @@ export default function App() {
           <Route path="*" element={<Navigate to="/login" replace />} />
         </Routes>
       </NotificationProvider>
+      </BranchProvider>
     </AuthProvider>
   );
 }

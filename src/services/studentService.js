@@ -35,17 +35,18 @@ export async function getNextStudentId() {
   return `${PREFIX}${num + 1}`;
 }
 
-export async function getStudents() {
-  const q = query(collection(db, STUDENTS), orderBy("name"));
+export async function getStudents(branchId) {
+  const constraints = [orderBy("name")];
+  if (branchId) constraints.unshift(where("branchId", "==", branchId));
+  const q = query(collection(db, STUDENTS), ...constraints);
   const snap = await getDocs(q);
   return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
 }
 
-export async function getStudentsByTeacher(teacherUid) {
-  const q = query(
-    collection(db, STUDENTS),
-    where("assignedTeacherId", "==", teacherUid)
-  );
+export async function getStudentsByTeacher(teacherUid, branchId) {
+  const constraints = [where("assignedTeacherId", "==", teacherUid)];
+  if (branchId) constraints.push(where("branchId", "==", branchId));
+  const q = query(collection(db, STUDENTS), ...constraints);
   const snap = await getDocs(q);
   return snap.docs
     .map((d) => ({ id: d.id, ...d.data() }))
@@ -116,6 +117,7 @@ export async function addStudent(data) {
     teacherPhone,
     batch: data.batch || "",
     vehicleType: data.vehicleType || "",
+    branchId: data.branchId || null,
     createdAt: serverTimestamp(),
     clientAuthUid: authUid || null,
   };

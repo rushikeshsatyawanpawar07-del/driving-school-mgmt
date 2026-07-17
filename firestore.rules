@@ -11,6 +11,11 @@ service cloud.firestore {
       return exists(path) ? get(path).data.role : null;
     }
 
+    function getTeacherBranch(uid) {
+      let path = /databases/$(database)/documents/teachers/$(uid);
+      return exists(path) ? get(path).data.branchId : null;
+    }
+
     function isOwner() {
       return isAuth() && getRole(request.auth.uid) == 'owner';
     }
@@ -23,6 +28,17 @@ service cloud.firestore {
       return isAuth() && getRole(request.auth.uid) == 'client';
     }
 
+    function isTeacherForBranch(resourceBranchId) {
+      if (!isTeacher()) return false;
+      return resourceBranchId == getTeacherBranch(request.auth.uid);
+    }
+
+    // ── branches ──
+    match /branches/{docId} {
+      allow read: if isAuth();
+      allow write: if isOwner();
+    }
+
     // ── user ──
     // Owner: full access. User: read own doc.
     match /user/{uid} {
@@ -33,15 +49,15 @@ service cloud.firestore {
     }
 
     // ── students ──
-    // Owner: full. Teacher: read/write assigned. Client: read own.
+    // Owner: full. Teacher: read/write assigned in same branch. Client: read own.
     match /students/{docId} {
       allow read: if isAuth() && (
         isOwner() ||
-        (isTeacher() && resource.data.assignedTeacherId == request.auth.uid) ||
+        (isTeacher() && resource.data.assignedTeacherId == request.auth.uid && isTeacherForBranch(resource.data.branchId)) ||
         (isClient() && resource.data.clientAuthUid == request.auth.uid)
       );
       allow create: if isOwner();
-      allow update: if isOwner() || (isTeacher() && resource.data.assignedTeacherId == request.auth.uid);
+      allow update: if isOwner() || (isTeacher() && resource.data.assignedTeacherId == request.auth.uid && isTeacherForBranch(resource.data.branchId));
       allow delete: if isOwner();
     }
 
@@ -53,12 +69,13 @@ service cloud.firestore {
 
     // ── inquiries ──
     match /inquiries/{docId} {
-      allow read, write: if isOwner();
+      allow read: if isOwner() || (isTeacher() && isTeacherForBranch(resource.data.branchId));
+      allow write: if isOwner();
     }
 
     // ── attendance ──
     match /attendance/{docId} {
-      allow read, write: if isOwner() || isTeacher();
+      allow read, write: if isOwner() || (isTeacher() && isTeacherForBranch(resource.data.branchId));
     }
 
     // ── metadata (invoice counter) ──
