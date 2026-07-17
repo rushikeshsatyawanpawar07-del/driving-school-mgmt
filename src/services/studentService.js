@@ -36,21 +36,29 @@ export async function getNextStudentId() {
 }
 
 export async function getStudents(branchId) {
-  const constraints = [orderBy("name")];
-  if (branchId) constraints.unshift(where("branchId", "==", branchId));
-  const q = query(collection(db, STUDENTS), ...constraints);
-  const snap = await getDocs(q);
-  return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  let constraints = [orderBy("name")];
+  if (branchId) constraints = [where("branchId", "==", branchId), orderBy("name")];
+  try {
+    const snap = await getDocs(query(collection(db, STUDENTS), ...constraints));
+    return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  } catch {
+    if (branchId) return getStudents();
+    return [];
+  }
 }
 
 export async function getStudentsByTeacher(teacherUid, branchId) {
-  const constraints = [where("assignedTeacherId", "==", teacherUid)];
-  if (branchId) constraints.push(where("branchId", "==", branchId));
-  const q = query(collection(db, STUDENTS), ...constraints);
-  const snap = await getDocs(q);
-  return snap.docs
-    .map((d) => ({ id: d.id, ...d.data() }))
-    .sort((a, b) => (a.name || "").localeCompare(b.name || ""));
+  let constraints = [where("assignedTeacherId", "==", teacherUid)];
+  if (branchId) constraints = [where("assignedTeacherId", "==", teacherUid), where("branchId", "==", branchId)];
+  try {
+    const snap = await getDocs(query(collection(db, STUDENTS), ...constraints));
+    return snap.docs
+      .map((d) => ({ id: d.id, ...d.data() }))
+      .sort((a, b) => (a.name || "").localeCompare(b.name || ""));
+  } catch {
+    if (branchId) return getStudentsByTeacher(teacherUid);
+    return [];
+  }
 }
 
 export async function getStudent(id) {

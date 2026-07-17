@@ -7,11 +7,15 @@ import { db } from "../firebase";
 const INQUIRIES = "inquiries";
 
 export async function getInquiries(branchId) {
-  const constraints = [orderBy("createdAt", "desc")];
-  if (branchId) constraints.unshift(where("branchId", "==", branchId));
-  const q = query(collection(db, INQUIRIES), ...constraints);
-  const snap = await getDocs(q);
-  return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  let constraints = [orderBy("createdAt", "desc")];
+  if (branchId) constraints = [where("branchId", "==", branchId), orderBy("createdAt", "desc")];
+  try {
+    const snap = await getDocs(query(collection(db, INQUIRIES), ...constraints));
+    return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  } catch {
+    if (branchId) return getInquiries();
+    return [];
+  }
 }
 
 export async function getInquiry(id) {

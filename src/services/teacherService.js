@@ -58,11 +58,15 @@ async function updateAuthAccount(idToken, newEmail, newPassword) {
 }
 
 export async function getTeachers(branchId) {
-  const constraints = [orderBy("name")];
-  if (branchId) constraints.unshift(where("branchId", "==", branchId));
-  const q = query(collection(db, TEACHERS), ...constraints);
-  const snap = await getDocs(q);
-  return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  let constraints = [orderBy("name")];
+  if (branchId) constraints = [where("branchId", "==", branchId), orderBy("name")];
+  try {
+    const snap = await getDocs(query(collection(db, TEACHERS), ...constraints));
+    return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  } catch {
+    if (branchId) return getTeachers();
+    return [];
+  }
 }
 
 export async function addTeacher(data) {
