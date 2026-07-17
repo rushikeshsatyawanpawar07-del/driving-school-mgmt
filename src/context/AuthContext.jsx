@@ -18,11 +18,11 @@ export function AuthProvider({ children }) {
       if (firebaseUser) {
         try {
           const userDoc = await getDoc(doc(db, "user", firebaseUser.uid));
-          const role = userDoc.exists() ? userDoc.data().role : null;
-          setUser({ ...firebaseUser, name: userDoc.data()?.name || "User" });
+          const exists = userDoc.exists();
+          const role = exists ? userDoc.data().role : null;
+          setUser({ ...firebaseUser, name: exists ? (userDoc.data().name || "User") : "User" });
           setUserRole(role);
         } catch (err) {
-          console.error("Auth fetch error:", err);
           setUser(firebaseUser);
           setUserRole(null);
         }

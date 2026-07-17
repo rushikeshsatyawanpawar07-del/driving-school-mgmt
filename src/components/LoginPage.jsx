@@ -99,7 +99,6 @@ export default function LoginPage() {
       const userCred = await signInWithEmailAndPassword(auth, email, password);
       await redirectAfterLogin(userCred.user, selectedRole);
     } catch (err) {
-      console.error("Email login error:", err.code, err.message);
       const msg =
         err.code === "auth/invalid-credential"
           ? "Invalid email or password."

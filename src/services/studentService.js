@@ -214,7 +214,9 @@ export async function deleteStudent(id) {
 export async function recordPayment(id, amount) {
   const student = await getStudent(id);
   if (!student) throw new Error("Student not found");
-  const feesPaid = student.feesPaid + Number(amount);
+  const amt = Number(amount);
+  if (isNaN(amt) || amt <= 0) throw new Error("Invalid payment amount");
+  const feesPaid = student.feesPaid + amt;
   const remainingFees = student.totalFees - feesPaid;
   await updateDoc(doc(db, STUDENTS, id), {
     feesPaid,

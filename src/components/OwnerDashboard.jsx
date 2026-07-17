@@ -56,6 +56,10 @@ export default function OwnerDashboard() {
     () => courseOptions.filter((c) => c.label.toLowerCase().includes(courseSearch.toLowerCase())),
     [courseSearch]
   );
+  const filteredInquiryCourses = useMemo(
+    () => courseOptions.filter((c) => c.label.toLowerCase().includes(inquiryCourseSearch.toLowerCase())),
+    [inquiryCourseSearch]
+  );
 
   useEffect(() => {
     const handleClick = (e) => { if (courseDropdownRef.current && !courseDropdownRef.current.contains(e.target)) setShowCourseDropdown(false); };
@@ -226,7 +230,8 @@ export default function OwnerDashboard() {
   };
 
   const handlePayment = async () => {
-    if (!paymentAmount || Number(paymentAmount) <= 0) {
+    const amt = Number(paymentAmount);
+    if (!paymentAmount || isNaN(amt) || amt <= 0) {
       addNotification("Enter a valid amount", "error");
       return;
     }
@@ -691,7 +696,7 @@ export default function OwnerDashboard() {
                 <h2>All Students</h2>
                 <div style={{ display: "flex", gap: 8 }}>
                   <button className="btn btn-primary" onClick={() => {
-                    setForm({ name: "", phone: "", course: "", joiningDate: "", totalFees: "" });
+                    setForm({ name: "", phone: "", altPhone: "", email: "", address: "", course: "", joiningDate: "", assignedTeacherId: "", batch: "", vehicleType: "", courseFees: 0, feesPaid: 0, pendingFees: 0, courseType: "", totalClasses: "", duration: "", classDuration: "" });
                     setSelectedStudent(null);
                     setView("addStudent");
                   }}>
@@ -756,7 +761,7 @@ export default function OwnerDashboard() {
                                   <button className="btn btn-icon btn-view" title="View" onClick={() => handleView(s.id)}><Eye size={18} /></button>
                                   <button className="btn btn-icon btn-edit" title="Edit" onClick={() => handleEdit(s.id)}><Pencil size={18} /></button>
                                   {s.studentId && (
-                                    <button className="btn btn-icon" title="Copy Student ID" onClick={() => { navigator.clipboard.writeText(s.studentId); addNotification("Student ID copied!"); }}><Copy size={18} /></button>
+                                    <button className="btn btn-icon" title="Copy Student ID" onClick={() => { navigator.clipboard.writeText(s.studentId).catch(() => {}); addNotification("Student ID copied!"); }}><Copy size={18} /></button>
                                   )}
                                   <button className="btn btn-icon btn-delete" title="Delete" disabled={deleting === s.id} onClick={() => {
                                     if (window.confirm(`Delete ${s.name}?`)) handleDelete(s.id);
@@ -786,7 +791,7 @@ export default function OwnerDashboard() {
                             <button className="btn btn-sm btn-secondary" onClick={() => handleView(s.id)}><Eye size={16} /> View</button>
                             <button className="btn btn-sm btn-primary" onClick={() => handleEdit(s.id)}><Pencil size={16} /> Edit</button>
                             {s.studentId && (
-                              <button className="btn btn-sm" onClick={() => { navigator.clipboard.writeText(s.studentId); addNotification("Student ID copied!"); }}><Copy size={16} /> Copy ID</button>
+                              <button className="btn btn-sm" onClick={() => { navigator.clipboard.writeText(s.studentId).catch(() => {}); addNotification("Student ID copied!"); }}><Copy size={16} /> Copy ID</button>
                             )}
                             <button className="btn btn-sm btn-danger" disabled={deleting === s.id} onClick={() => { if (window.confirm(`Delete ${s.name}?`)) handleDelete(s.id); }}><Trash2 size={16} /> Delete</button>
                           </div>
@@ -1472,10 +1477,10 @@ export default function OwnerDashboard() {
                       />
                       {inquiryShowCourseDropdown && (
                         <div className="course-dropdown">
-                          {filteredCourses.length === 0 ? (
+                          {filteredInquiryCourses.length === 0 ? (
                             <div className="course-dropdown-empty">No courses found</div>
                           ) : (
-                            filteredCourses.map((c) => (
+                            filteredInquiryCourses.map((c) => (
                               <div key={c.id} className="course-dropdown-item" onClick={() => {
                                 setInquirySelectedCourse(c);
                                 setInquiryCourseSearch(c.label);
