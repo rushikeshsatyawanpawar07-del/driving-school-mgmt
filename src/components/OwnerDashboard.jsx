@@ -600,7 +600,7 @@ export default function OwnerDashboard() {
                   </div>
                 </div>
               </div>
-              {branches.length === 0 && branchesLoaded && (
+              {branchesLoaded && (
                 <div className="card" style={{ marginBottom: 16, borderLeft: "4px solid var(--warning)" }}>
                   <SeedBranches onDone={() => window.location.reload()} />
                 </div>

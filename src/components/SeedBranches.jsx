@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { collection, doc, setDoc, updateDoc, getDocs } from "firebase/firestore";
 import { db } from "../firebase";
 import { useAuth } from "../context/AuthContext";
 import { useNotification } from "../context/NotificationContext";
+import { useBranch } from "../context/BranchContext";
 
 const branchData = [
   { id: "branch_pune", name: "Vadgaon", code: "VDG", address: "Vadgaon Branch", phone: "+91 98765 43211" },
@@ -15,8 +16,11 @@ const DEFAULT_BRANCH = "branch_pune";
 export default function SeedBranches({ onDone }) {
   const { user } = useAuth();
   const { addNotification } = useNotification();
+  const { branches, setBranches } = useBranch();
   const [seeding, setSeeding] = useState(false);
   const [migrating, setMigrating] = useState(false);
+
+  const currentNames = branches.map((b) => b.name).join(", ");
 
   const handleSeed = async () => {
     setSeeding(true);
@@ -35,7 +39,7 @@ export default function SeedBranches({ onDone }) {
           accessibleBranchIds: branchData.map((b) => b.id),
         });
       }
-      addNotification("3 branches created! Please log out and log back in.");
+      addNotification("Branch names updated! Log out and log back in to see changes.");
       if (onDone) onDone();
     } catch (e) {
       addNotification("Failed: " + (e.message || "unknown error"), "error");
@@ -56,7 +60,7 @@ export default function SeedBranches({ onDone }) {
           }
         }
       }
-      addNotification(`${count} old records assigned to Pune branch. Switch branch to view them.`);
+      addNotification(`${count} old records assigned to Vadgaon branch.`);
     } catch (e) {
       addNotification("Migration failed: " + (e.message || "error"), "error");
     }
@@ -65,15 +69,20 @@ export default function SeedBranches({ onDone }) {
 
   return (
     <div>
-      <h3>Initialize Branches</h3>
+      <h3>Branch Management</h3>
+      {branches.length > 0 && (
+        <p style={{ color: "var(--gray-500)", marginBottom: 8 }}>
+          Current branches: <strong>{currentNames}</strong>
+        </p>
+      )}
       <p style={{ color: "var(--gray-500)", marginBottom: 12 }}>
-        This will create 3 branches (Pune, Mumbai, Nashik) and grant you access to all.
+        Click below to update branch names to: <strong>Vadgaon, Dhayari, Kirkatwadi</strong>
       </p>
       <button className="login-btn" onClick={handleSeed} disabled={seeding} style={{ background: "var(--primary)", color: "#fff", border: "none", padding: "10px 20px", borderRadius: 8, cursor: "pointer", marginRight: 12 }}>
-        {seeding ? "Creating..." : "Create 3 Branches"}
+        {seeding ? "Saving..." : "Update Branch Names"}
       </button>
       <button className="login-btn" onClick={handleMigrate} disabled={migrating} style={{ background: "var(--orange)", color: "#fff", border: "none", padding: "10px 20px", borderRadius: 8, cursor: "pointer" }}>
-        {migrating ? "Migrating..." : "Assign Old Data to Pune"}
+        {migrating ? "Migrating..." : "Assign Old Data to Vadgaon"}
       </button>
     </div>
   );
