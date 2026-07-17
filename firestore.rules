@@ -29,8 +29,7 @@ service cloud.firestore {
     }
 
     function isTeacherForBranch(resourceBranchId) {
-      if (!isTeacher()) return false;
-      return resourceBranchId == getTeacherBranch(request.auth.uid);
+      return isTeacher() && resourceBranchId == getTeacherBranch(request.auth.uid);
     }
 
     // ── branches ──
