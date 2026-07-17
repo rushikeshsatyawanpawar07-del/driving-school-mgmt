@@ -5,12 +5,12 @@ import { useAuth } from "../context/AuthContext";
 import { useNotification } from "../context/NotificationContext";
 
 const branchData = [
-  { id: "branch_pune", name: "Pune", code: "PUN", address: "Pune Branch Address", phone: "+91 98765 43211" },
-  { id: "branch_mumbai", name: "Mumbai", code: "MUM", address: "Mumbai Branch Address", phone: "+91 98765 43212" },
-  { id: "branch_nashik", name: "Nashik", code: "NAS", address: "Nashik Branch Address", phone: "+91 98765 43213" },
+  { id: "branch_vadgaon", name: "Vadgaon", code: "VDG", address: "Vadgaon Branch", phone: "+91 98765 43211" },
+  { id: "branch_dhayari", name: "Dhayari", code: "DHA", address: "Dhayari Branch", phone: "+91 98765 43212" },
+  { id: "branch_kirkatwadi", name: "Kirkatwadi", code: "KIR", address: "Kirkatwadi Branch", phone: "+91 98765 43213" },
 ];
 
-const DEFAULT_BRANCH = "branch_pune";
+const DEFAULT_BRANCH = "branch_vadgaon";
 
 export default function SeedBranches({ onDone }) {
   const { user } = useAuth();
