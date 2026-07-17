@@ -35,4 +35,13 @@ export default defineConfig({
       },
     }),
   ],
+  build: {
+    rolldownOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes("firebase")) return "firebase";
+        },
+      },
+    },
+  },
 })
