@@ -9,7 +9,6 @@ export default defineConfig({
     tailwindcss(),
     VitePWA({
       registerType: 'autoUpdate',
-      workbox: { skipWaiting: true, clientsClaim: true, maximumFileSizeToCacheInBytes: 4 * 1024 * 1024 },
       includeAssets: ['favicon.jpeg', 'logo.png', 'pwa-192x192.png', 'pwa-512x512.png'],
       manifest: {
         name: 'Driving School Management',
@@ -35,13 +34,4 @@ export default defineConfig({
       },
     }),
   ],
-  build: {
-    rolldownOptions: {
-      output: {
-        manualChunks(id) {
-          if (id.includes("firebase")) return "firebase";
-        },
-      },
-    },
-  },
 })
