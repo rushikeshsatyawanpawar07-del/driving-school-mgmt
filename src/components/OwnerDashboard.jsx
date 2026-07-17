@@ -56,10 +56,6 @@ export default function OwnerDashboard() {
     () => courseOptions.filter((c) => c.label.toLowerCase().includes(courseSearch.toLowerCase())),
     [courseSearch]
   );
-  const filteredInquiryCourses = useMemo(
-    () => courseOptions.filter((c) => c.label.toLowerCase().includes(inquiryCourseSearch.toLowerCase())),
-    [inquiryCourseSearch]
-  );
 
   useEffect(() => {
     const handleClick = (e) => { if (courseDropdownRef.current && !courseDropdownRef.current.contains(e.target)) setShowCourseDropdown(false); };
@@ -102,6 +98,10 @@ export default function OwnerDashboard() {
   const [inquiryShowCourseDropdown, setInquiryShowCourseDropdown] = useState(false);
   const [inquirySelectedCourse, setInquirySelectedCourse] = useState(null);
   const inquiryCourseDropdownRef = useRef(null);
+  const filteredInquiryCourses = useMemo(
+    () => courseOptions.filter((c) => c.label.toLowerCase().includes(inquiryCourseSearch.toLowerCase())),
+    [inquiryCourseSearch]
+  );
 
   // ── Student handlers ──
 
