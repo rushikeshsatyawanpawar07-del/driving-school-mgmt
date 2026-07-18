@@ -13,7 +13,7 @@ import {
 } from "../services/teacherService";
 import { generateInvoicePDF } from "../services/invoiceService";
 import { SCHOOL } from "../config/schoolConfig";
-import SeedBranches from "./SeedBranches";
+
 import {
   getInquiries, addInquiry, updateInquiry, deleteInquiry, checkFollowUps, markFollowUpSent,
 } from "../services/inquiryService";
@@ -605,11 +605,7 @@ export default function OwnerDashboard() {
                   </div>
                 </div>
               </div>
-              {branchesLoaded && (
-                <div className="card" style={{ marginBottom: 16, borderLeft: "4px solid var(--warning)" }}>
-                  <SeedBranches onDone={() => window.location.reload()} />
-                </div>
-              )}
+
               <div className="card">
                 <h2>Welcome back, {user?.name || "Owner"}!</h2>
                 <p>Manage your driving school from this dashboard.</p>
