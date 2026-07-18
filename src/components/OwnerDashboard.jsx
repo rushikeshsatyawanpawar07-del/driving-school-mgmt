@@ -13,7 +13,6 @@ import {
 } from "../services/teacherService";
 import { generateInvoicePDF } from "../services/invoiceService";
 import { SCHOOL } from "../config/schoolConfig";
-import SeedDummyData from "./SeedDummyData";
 
 import {
   getInquiries, addInquiry, updateInquiry, deleteInquiry, checkFollowUps, markFollowUpSent,
@@ -611,8 +610,6 @@ export default function OwnerDashboard() {
                 <h2>Welcome back, {user?.name || "Owner"}!</h2>
                 <p>Manage your driving school from this dashboard.</p>
               </div>
-
-              <SeedDummyData onDone={() => window.location.reload()} />
 
               {/* Follow-Up Required Section */}
               <div className="card" style={{ borderLeft: "4px solid #e74c3c" }}>
