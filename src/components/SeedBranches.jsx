@@ -6,9 +6,9 @@ import { useNotification } from "../context/NotificationContext";
 import { useBranch } from "../context/BranchContext";
 
 const branchData = [
-  { id: "branch_pune", name: "Vadgaon", code: "VDG", address: "Vadgaon Branch", phone: "+91 98765 43211" },
-  { id: "branch_mumbai", name: "Dhayari", code: "DHA", address: "Dhayari Branch", phone: "+91 98765 43212" },
-  { id: "branch_nashik", name: "Kirkatwadi", code: "KIR", address: "Kirkatwadi Branch", phone: "+91 98765 43213" },
+  { id: "branch_dhayari", name: "Dhayari", code: "DHA", address: "Dhayari Branch", phone: "+91 98765 43211" },
+  { id: "branch_kirkatwadi", name: "Kirkatwadi", code: "KIR", address: "Kirkatwadi Branch", phone: "+91 98765 43212" },
+  { id: "branch_pune", name: "Vadgaon", code: "VDG", address: "Vadgaon Branch", phone: "+91 98765 43213" },
 ];
 
 const DEFAULT_BRANCH = "branch_pune";
@@ -39,7 +39,7 @@ export default function SeedBranches({ onDone }) {
           accessibleBranchIds: branchData.map((b) => b.id),
         });
       }
-      addNotification("Branch names updated! Log out and log back in to see changes.");
+      addNotification("Branches created! Log out and log back in to see changes.");
       if (onDone) onDone();
     } catch (e) {
       addNotification("Failed: " + (e.message || "unknown error"), "error");
@@ -76,7 +76,7 @@ export default function SeedBranches({ onDone }) {
         </p>
       )}
       <p style={{ color: "var(--gray-500)", marginBottom: 12 }}>
-        Click below to update branch names to: <strong>Vadgaon, Dhayari, Kirkatwadi</strong>
+        Click below to create branches: <strong>Dhayari, Kirkatwadi, Vadgaon</strong>
       </p>
       <button className="login-btn" onClick={handleSeed} disabled={seeding} style={{ background: "var(--primary)", color: "#fff", border: "none", padding: "10px 20px", borderRadius: 8, cursor: "pointer", marginRight: 12 }}>
         {seeding ? "Saving..." : "Update Branch Names"}
