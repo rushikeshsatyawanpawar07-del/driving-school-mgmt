@@ -6,18 +6,19 @@ import { useNotification } from "../context/NotificationContext";
 import { useBranch } from "../context/BranchContext";
 
 const BRANCH_ID_MAP = {
-  branch_mumbai: "dhayari",
-  branch_nashik: "kirkatwadi",
-  branch_pune: "vadgaon",
+  branch_mumbai: "branch_dhayari",
+  branch_nashik: "branch_kirkatwadi",
+  branch_pune: "branch_vadgaon",
 };
 
 const branchData = [
-  { id: "dhayari", name: "Dhayari", code: "DHA", address: "Dhayari Branch", phone: "+91 98765 43211" },
-  { id: "kirkatwadi", name: "Kirkatwadi", code: "KIR", address: "Kirkatwadi Branch", phone: "+91 98765 43212" },
-  { id: "vadgaon", name: "Vadgaon", code: "VDG", address: "Vadgaon Branch", phone: "+91 98765 43213" },
+  { id: "branch_dhayari", name: "Dhayari", code: "DHA", address: "Dhayari Branch", phone: "+91 98765 43211" },
+  { id: "branch_kirkatwadi", name: "Kirkatwadi", code: "KIR", address: "Kirkatwadi Branch", phone: "+91 98765 43212" },
+  { id: "branch_vadgaon", name: "Vadgaon", code: "VDG", address: "Vadgaon Branch", phone: "+91 98765 43213" },
 ];
 
-const DEFAULT_BRANCH = "vadgaon";
+const DELETE_OLD_IDS = ["branch_mumbai", "branch_nashik", "branch_pune"];
+const DEFAULT_BRANCH = "branch_vadgaon";
 
 export default function SeedBranches({ onDone }) {
   const { user } = useAuth();
@@ -57,19 +58,35 @@ export default function SeedBranches({ onDone }) {
   const handleRenameBranchIds = async () => {
     setRenaming(true);
     try {
-      // Step 1: Read old branch docs, create new ones with new IDs, delete old ones
-      for (const [oldId, newId] of Object.entries(BRANCH_ID_MAP)) {
-        const oldDoc = await getDocs(collection(db, "branches"));
-        const old = oldDoc.docs.find((d) => d.id === oldId);
-        if (old) {
-          await setDoc(doc(db, "branches", newId), old.data());
+      // Step 1: Read branch_pune, create branch_vadgaon with its data, update fields
+      const allBranches = await getDocs(collection(db, "branches"));
+      const puneDoc = allBranches.docs.find((d) => d.id === "branch_pune");
+      if (puneDoc) {
+        await setDoc(doc(db, "branches", "branch_vadgaon"), {
+          ...puneDoc.data(),
+          name: "Vadgaon",
+          address: "Vadgaon Branch",
+          code: "VDG",
+        });
+      } else {
+        // If branch_pune doesn't exist, create branch_vadgaon from scratch
+        await setDoc(doc(db, "branches", "branch_vadgaon"), {
+          name: "Vadgaon", code: "VDG", address: "Vadgaon Branch",
+          createdAt: new Date().toISOString(),
+        });
+      }
+
+      // Step 2: Delete old branch docs
+      for (const oldId of DELETE_OLD_IDS) {
+        const has = allBranches.docs.find((d) => d.id === oldId);
+        if (has) {
           await deleteDoc(doc(db, "branches", oldId));
         }
       }
 
-      // Step 2: Update all records referencing old branch IDs to new IDs
+      // Step 3: Update all records referencing old branch IDs to new IDs
       let recordCount = 0;
-      for (const coll of ["students", "teachers", "inquiries"]) {
+      for (const coll of ["students", "teachers", "inquiries", "attendance"]) {
         const snap = await getDocs(collection(db, coll));
         for (const d of snap.docs) {
           const data = d.data();
@@ -81,7 +98,7 @@ export default function SeedBranches({ onDone }) {
         }
       }
 
-      // Step 3: Update user accessibleBranchIds
+      // Step 4: Update user accessibleBranchIds
       if (user) {
         const userDoc = await getDocs(collection(db, "user"));
         const userRef = userDoc.docs.find((d) => d.id === user.uid);
@@ -91,7 +108,7 @@ export default function SeedBranches({ onDone }) {
         }
       }
 
-      addNotification(`Branch IDs renamed. ${recordCount} records updated.`);
+      addNotification(`Done. ${recordCount} records updated. Final branches: branch_dhayari, branch_kirkatwadi, branch_vadgaon.`);
       if (onDone) onDone();
     } catch (e) {
       addNotification("Rename failed: " + (e.message || "unknown error"), "error");
@@ -128,7 +145,7 @@ export default function SeedBranches({ onDone }) {
         </p>
       )}
       <p style={{ color: "var(--gray-500)", marginBottom: 12 }}>
-        Click below to create branches: <strong>Dhayari, Kirkatwadi, Vadgaon</strong>
+        Click below to create branches: <strong>branch_dhayari, branch_kirkatwadi, branch_vadgaon</strong>
       </p>
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 8 }}>
         <button className="login-btn" onClick={handleSeed} disabled={seeding} style={{ background: "var(--primary)", color: "#fff", border: "none", padding: "10px 20px", borderRadius: 8, cursor: "pointer" }}>
