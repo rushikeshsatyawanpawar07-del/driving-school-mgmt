@@ -9,10 +9,10 @@ export default defineConfig({
     tailwindcss(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.jpeg', 'logo.png', 'pwa-192x192.png', 'pwa-512x512.png'],
+      includeAssets: ['favicon.jpeg', 'logo.jpeg', 'pwa-192x192.png', 'pwa-512x512.png'],
       manifest: {
-        name: 'Driving School Management',
-        short_name: 'DriveSchool',
+        name: 'NEW BHARATIS MOTOR DRIVING SCHOOL',
+        short_name: 'Bhartis',
         description: 'Driving school management system',
         start_url: '/',
         display: 'standalone',

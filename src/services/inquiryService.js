@@ -1,10 +1,32 @@
 import {
   collection, addDoc, updateDoc, deleteDoc, doc,
-  getDocs, getDoc, query, orderBy, where, serverTimestamp
+  getDocs, getDoc, query, orderBy, where, serverTimestamp, onSnapshot
 } from "firebase/firestore";
 import { db } from "../firebase";
 
 const INQUIRIES = "inquiries";
+
+export function subscribeInquiries(branchId, callback) {
+  function buildQuery(withBranch) {
+    if (withBranch && branchId) {
+      return query(collection(db, INQUIRIES), where("branchId", "==", branchId), orderBy("createdAt", "desc"));
+    }
+    return query(collection(db, INQUIRIES), orderBy("createdAt", "desc"));
+  }
+  const q = buildQuery(true);
+  return onSnapshot(q, (snap) => {
+    callback(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+  }, async () => {
+    if (branchId) {
+      try {
+        const snap = await getDocs(buildQuery(false));
+        callback(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+      } catch { callback([]); }
+    } else {
+      callback([]);
+    }
+  });
+}
 
 export async function getInquiries(branchId) {
   let constraints = [orderBy("createdAt", "desc")];
@@ -13,7 +35,6 @@ export async function getInquiries(branchId) {
     const snap = await getDocs(query(collection(db, INQUIRIES), ...constraints));
     return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
   } catch {
-    if (branchId) return getInquiries();
     return [];
   }
 }
@@ -21,6 +42,20 @@ export async function getInquiries(branchId) {
 export async function getInquiry(id) {
   const snap = await getDoc(doc(db, INQUIRIES, id));
   return snap.exists() ? { id: snap.id, ...snap.data() } : null;
+}
+
+export async function searchInquiriesByName(name, branchId) {
+  if (!name || !branchId) return [];
+  const q = query(
+    collection(db, INQUIRIES),
+    where("branchId", "==", branchId)
+  );
+  const snap = await getDocs(q);
+  const inquiries = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  const search = name.toLowerCase().trim();
+  return inquiries.filter(
+    (inq) => inq.name && inq.name.toLowerCase().includes(search)
+  );
 }
 
 export async function addInquiry(data) {

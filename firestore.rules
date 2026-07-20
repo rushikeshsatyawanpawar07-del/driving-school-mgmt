@@ -24,12 +24,29 @@ service cloud.firestore {
       return isAuth() && getRole(request.auth.uid) == 'teacher';
     }
 
+    function isReceptionist() {
+      return isAuth() && getRole(request.auth.uid) == 'reception';
+    }
+
     function isClient() {
       return isAuth() && getRole(request.auth.uid) == 'client';
     }
 
     function isTeacherForBranch(resourceBranchId) {
       return isTeacher() && resourceBranchId == getTeacherBranch(request.auth.uid);
+    }
+
+    function getReceptionistBranch(uid) {
+      let path = /databases/$(database)/documents/receptionists/$(uid);
+      return exists(path) ? get(path).data.branchId : null;
+    }
+
+    function isReceptionistForBranch(resourceBranchId) {
+      return isReceptionist() && resourceBranchId == getReceptionistBranch(request.auth.uid);
+    }
+
+    function isReceptionistOrAuth() {
+      return isReceptionist();
     }
 
     // ── branches ──
@@ -39,47 +56,88 @@ service cloud.firestore {
     }
 
     // ── user ──
-    // Owner: full access. User: read own doc.
+    // Owner: full access. Reception: create/update for clients. User: read own doc.
     match /user/{uid} {
       allow read: if isAuth() && (isOwner() || request.auth.uid == uid);
-      allow create: if isOwner();
-      allow update: if isOwner();
-      allow delete: if isOwner();
+      allow create: if isOwner() || (isReceptionistOrAuth() && request.resource.data.role == 'client');
+      allow update: if isOwner() || (isReceptionistOrAuth() && resource.data.role == 'client');
+      allow delete: if isOwner() || (isReceptionistOrAuth() && resource.data.role == 'client');
     }
 
     // ── students ──
-    // Owner: full. Teacher: read/write assigned in same branch. Client: read own.
+    // Owner: full. Teacher: read/write assigned in same branch. Reception: read own branch. Client: read own.
     match /students/{docId} {
       allow read: if isAuth() && (
         isOwner() ||
         (isTeacher() && resource.data.assignedTeacherId == request.auth.uid && isTeacherForBranch(resource.data.branchId)) ||
+        (isReceptionistOrAuth() && resource.data.branchId == getReceptionistBranch(request.auth.uid)) ||
         (isClient() && resource.data.clientAuthUid == request.auth.uid)
       );
-      allow create: if isOwner();
-      allow update: if isOwner() || (isTeacher() && resource.data.assignedTeacherId == request.auth.uid && isTeacherForBranch(resource.data.branchId));
+      allow create: if isOwner() || (isReceptionistOrAuth() && request.resource.data.branchId == getReceptionistBranch(request.auth.uid));
+      allow update: if isOwner() || (isTeacher() && resource.data.assignedTeacherId == request.auth.uid && isTeacherForBranch(resource.data.branchId)) || (isReceptionistOrAuth() && resource.data.branchId == getReceptionistBranch(request.auth.uid));
       allow delete: if isOwner();
     }
 
     // ── teachers ──
     match /teachers/{uid} {
-      allow read: if isOwner() || (isTeacher() && request.auth.uid == uid);
+      allow read: if isOwner() || (isTeacher() && request.auth.uid == uid) || (isReceptionistOrAuth() && resource.data.branchId == getReceptionistBranch(request.auth.uid));
       allow write: if isOwner();
     }
 
     // ── inquiries ──
     match /inquiries/{docId} {
-      allow read: if isOwner() || (isTeacher() && isTeacherForBranch(resource.data.branchId));
-      allow write: if isOwner();
+      allow read: if isOwner() || (isTeacher() && isTeacherForBranch(resource.data.branchId)) || (isReceptionistOrAuth() && resource.data.branchId == getReceptionistBranch(request.auth.uid));
+      allow create: if isOwner() || (isReceptionistOrAuth() && request.resource.data.branchId == getReceptionistBranch(request.auth.uid));
+      allow update: if isOwner() || (isReceptionistOrAuth() && resource.data.branchId == getReceptionistBranch(request.auth.uid));
+      allow delete: if isOwner();
     }
 
     // ── attendance ──
     match /attendance/{docId} {
-      allow read, write: if isOwner() || (isTeacher() && isTeacherForBranch(resource.data.branchId));
+      allow read: if isOwner() || (isTeacher() && isTeacherForBranch(resource.data.branchId)) || (isClient() && resource.data.clientAuthUid == request.auth.uid);
+      allow create: if isOwner() || (isTeacher() && request.resource.data.branchId == getTeacherBranch(request.auth.uid));
+      allow update: if isOwner() || (isTeacher() && isTeacherForBranch(resource.data.branchId));
+      allow delete: if isOwner();
     }
 
-    // ── metadata (invoice counter) ──
-    match /metadata/{docId} {
-      allow read, write: if isOwner();
+    // ── vehicles ──
+    match /vehicles/{vehicleId} {
+      allow read: if isAuth();
+      allow create, update, delete: if isOwner();
+    }
+
+    // ── courses ──
+    match /courses/{courseId} {
+      allow read: if isAuth();
+      allow create, update, delete: if isOwner();
+    }
+
+    // ── receptionists ──
+    match /receptionists/{uid} {
+      allow read: if isOwner() || (isAuth() && request.auth.uid == uid);
+      allow write: if isOwner();
+    }
+
+    // ── counters (student ID sequence) ──
+    match /counters/{docId} {
+      allow read: if isAuth();
+      allow write: if isOwner() || isReceptionistOrAuth();
+    }
+
+    // ── licenseReminders ──
+    match /licenseReminders/{docId} {
+      allow read: if isOwner() || isTeacher() || isReceptionistOrAuth();
+      allow create: if isOwner() || isTeacher() || isReceptionistOrAuth();
+      allow update: if isOwner() || isReceptionistOrAuth();
+      allow delete: if isOwner();
+    }
+
+    // ── complaints ──
+    match /complaints/{docId} {
+      allow read: if isOwner() || isTeacher() || isReceptionistOrAuth();
+      allow create: if isAuth();
+      allow update: if isOwner();
+      allow delete: if isOwner();
     }
   }
 }

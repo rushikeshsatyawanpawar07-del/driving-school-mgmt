@@ -1,10 +1,10 @@
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
-import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
+import { doc, runTransaction, serverTimestamp } from "firebase/firestore";
 import { db } from "../firebase";
 import { SCHOOL } from "../config/schoolConfig";
 
-const COUNTER_DOC = doc(db, "metadata", "invoiceCounter");
+const COUNTER_REF = doc(db, "counters", "invoiceCounter");
 
 function formatDate() {
   const d = new Date();
@@ -19,13 +19,16 @@ function formatCurrency(n) {
 }
 
 async function getNextInvoiceNumber() {
-  const snap = await getDoc(COUNTER_DOC);
-  let next = 1;
-  if (snap.exists()) {
-    next = (snap.data().last || 0) + 1;
-  }
-  await setDoc(COUNTER_DOC, { last: next, updatedAt: serverTimestamp() });
-  return "INV-" + String(next).padStart(4, "0");
+  const result = await runTransaction(db, async (transaction) => {
+    const snap = await transaction.get(COUNTER_REF);
+    let next = 1;
+    if (snap.exists()) {
+      next = (snap.data().last || 0) + 1;
+    }
+    transaction.set(COUNTER_REF, { last: next, updatedAt: serverTimestamp() });
+    return next;
+  });
+  return "INV-" + String(result).padStart(4, "0");
 }
 
 function getTeacherName(teachers, teacherUid) {
@@ -34,22 +37,21 @@ function getTeacherName(teachers, teacherUid) {
   return t ? t.name : "Not Assigned";
 }
 
-export async function generateInvoicePDF(student, teachers) {
+export async function generateInvoicePDF(student, teachers, branchName) {
   const invoiceNo = await getNextInvoiceNumber();
   const docPdf = new jsPDF({ unit: "mm", format: "a4" });
   const pageW = 210;
   const margin = 20;
   const contentW = pageW - 2 * margin;
 
-  // Colors
-  const primary = [79, 70, 229]; // #4F46E5
+  const primary = [79, 70, 229];
   const gray = [100, 100, 100];
   const dark = [50, 50, 50];
 
-  // --- Header ---
-  // Load logo
+  const branchAddress = branchName ? (SCHOOL.branchAddresses[branchName] || SCHOOL.address) : SCHOOL.address;
+
   try {
-    const resp = await fetch("/logo.png");
+    const resp = await fetch("/logo.jpeg");
     const blob = await resp.blob();
     const reader = new FileReader();
     await new Promise((resolve) => {
@@ -59,21 +61,25 @@ export async function generateInvoicePDF(student, teachers) {
     });
   } catch { /* skip logo */ }
 
-  docPdf.setFontSize(22);
+  const schoolNameMaxW = pageW - margin - (margin + 34);
+  let schoolNameSize = 22;
+  const nameLen = (SCHOOL.name || "").length;
+  if (nameLen > 25) schoolNameSize = 16;
+  else if (nameLen > 18) schoolNameSize = 18;
+
+  docPdf.setFontSize(schoolNameSize);
   docPdf.setTextColor(...primary);
-  docPdf.text(SCHOOL.name, margin + 34, 28);
+  docPdf.text(SCHOOL.name, margin + 34, 28, { maxWidth: schoolNameMaxW });
 
-  docPdf.setFontSize(9);
+  docPdf.setFontSize(8);
   docPdf.setTextColor(...gray);
-  docPdf.text(SCHOOL.address, margin + 34, 34);
-  docPdf.text("Phone: " + SCHOOL.phone + "  |  Email: " + SCHOOL.email, margin + 34, 39);
+  docPdf.text(branchAddress, margin + 34, 34, { maxWidth: schoolNameMaxW });
+  docPdf.text("Contact Number: " + SCHOOL.ownerPhone, margin + 34, 42, { maxWidth: schoolNameMaxW });
 
-  // Divider line
   docPdf.setDrawColor(...primary);
   docPdf.setLineWidth(0.8);
-  docPdf.line(margin, 48, pageW - margin, 48);
+  docPdf.line(margin, 52, pageW - margin, 52);
 
-  // --- Invoice Title ---
   docPdf.setFontSize(18);
   docPdf.setTextColor(...primary);
   docPdf.text("INVOICE", margin, 62);
@@ -88,12 +94,14 @@ export async function generateInvoicePDF(student, teachers) {
   docPdf.setTextColor(...primary);
   docPdf.text("Student Information", margin, 88);
 
-  // thin line
   docPdf.setDrawColor(200, 200, 200);
   docPdf.setLineWidth(0.3);
   docPdf.line(margin, 91, pageW - margin, 91);
 
   const teacherName = getTeacherName(teachers, student.assignedTeacherId);
+  const vehicleLabel = student.selectedVehicles?.length
+    ? student.selectedVehicles.map((v) => v.name).join(", ")
+    : student.twoWheelerName || student.vehicleType || "—";
 
   autoTable(docPdf, {
     startY: 94,
@@ -103,95 +111,160 @@ export async function generateInvoicePDF(student, teachers) {
     headStyles: { fillColor: [245, 247, 250], textColor: primary, fontStyle: "bold", halign: "left" },
     columnStyles: { 0: { cellWidth: 55, fontStyle: "bold", textColor: gray } },
     body: [
-      [
-        { content: "Student ID", styles: { fontStyle: "bold", textColor: gray } },
-        student.studentId || "—",
-      ],
-      [
-        { content: "Student Name", styles: { fontStyle: "bold", textColor: gray } },
-        student.name || "—",
-      ],
-      [
-        { content: "Phone Number", styles: { fontStyle: "bold", textColor: gray } },
-        student.phone || "—",
-      ],
-      [
-        { content: "Email", styles: { fontStyle: "bold", textColor: gray } },
-        student.email || "—",
-      ],
-      [
-        { content: "Course", styles: { fontStyle: "bold", textColor: gray } },
-        student.course || "—",
-      ],
-      [
-        { content: "Joining Date", styles: { fontStyle: "bold", textColor: gray } },
-        student.joiningDate || "—",
-      ],
-      [
-        { content: "Assigned Teacher", styles: { fontStyle: "bold", textColor: gray } },
-        teacherName,
-      ],
-      [
-        { content: "Batch", styles: { fontStyle: "bold", textColor: gray } },
-        student.batch || "—",
-      ],
-      [
-        { content: "Vehicle Type", styles: { fontStyle: "bold", textColor: gray } },
-        student.vehicleType || "—",
-      ],
+      [{ content: "Student ID", styles: { fontStyle: "bold", textColor: gray } }, student.studentId || "—"],
+      [{ content: "Student Name", styles: { fontStyle: "bold", textColor: gray } }, student.name || "—"],
+      [{ content: "Phone Number", styles: { fontStyle: "bold", textColor: gray } }, student.phone || "—"],
+      [{ content: "Email", styles: { fontStyle: "bold", textColor: gray } }, student.email || "—"],
+      [{ content: "Address", styles: { fontStyle: "bold", textColor: gray } }, student.permanentAddress || student.address || "—"],
+      [{ content: "Course", styles: { fontStyle: "bold", textColor: gray } }, student.course || "—"],
+      [{ content: "Joining Date", styles: { fontStyle: "bold", textColor: gray } }, student.joiningDate || "—"],
+      [{ content: "Assigned Teacher", styles: { fontStyle: "bold", textColor: gray } }, teacherName],
+      [{ content: "Batch", styles: { fontStyle: "bold", textColor: gray } }, student.batch + (student.batchTime ? " (" + student.batchTime + ")" : "") || "—"],
+      [{ content: "Vehicle(s)", styles: { fontStyle: "bold", textColor: gray } }, vehicleLabel],
     ],
     theme: "plain",
     tableLineColor: [220, 220, 220],
     tableLineWidth: 0.2,
   });
 
-  const studentTableEnd = docPdf.lastAutoTable.finalY + 6;
+  let nextY = docPdf.lastAutoTable.finalY + 6;
+
+  // --- Vehicles Section (if selectedVehicles exist) ---
+  const vehicles = student.selectedVehicles;
+  if (vehicles?.length > 0) {
+    docPdf.setFontSize(13);
+    docPdf.setTextColor(...primary);
+    docPdf.text("Vehicle Details", margin, nextY);
+
+    docPdf.setDrawColor(200, 200, 200);
+    docPdf.setLineWidth(0.3);
+    docPdf.line(margin, nextY + 3, pageW - margin, nextY + 3);
+
+    autoTable(docPdf, {
+      startY: nextY + 6,
+      margin: { left: margin, right: margin },
+      tableWidth: contentW,
+      styles: { fontSize: 10, cellPadding: 3, textColor: dark },
+      headStyles: { fillColor: [245, 247, 250], textColor: primary, fontStyle: "bold" },
+      columns: [
+        { header: "#", dataKey: "idx" },
+        { header: "Vehicle Name", dataKey: "name" },
+        { header: "Price", dataKey: "price" },
+      ],
+      body: vehicles.map((v, i) => ({
+        idx: String(i + 1),
+        name: v.name || "—",
+        price: formatCurrency(v.price || 0),
+      })),
+      theme: "plain",
+      tableLineColor: [220, 220, 220],
+      tableLineWidth: 0.2,
+      columnStyles: {
+        0: { cellWidth: 15, halign: "center", textColor: gray },
+        1: { fontStyle: "bold" },
+        2: { halign: "right" },
+      },
+    });
+
+    nextY = docPdf.lastAutoTable.finalY + 6;
+  }
+
+  // --- Two Wheeler Details (if not in selectedVehicles) ---
+  if (!vehicles?.length && student.twoWheelerName) {
+    docPdf.setFontSize(13);
+    docPdf.setTextColor(...primary);
+    docPdf.text("Vehicle Details", margin, nextY);
+
+    docPdf.setDrawColor(200, 200, 200);
+    docPdf.setLineWidth(0.3);
+    docPdf.line(margin, nextY + 3, pageW - margin, nextY + 3);
+
+    autoTable(docPdf, {
+      startY: nextY + 6,
+      margin: { left: margin, right: margin },
+      tableWidth: contentW,
+      styles: { fontSize: 10, cellPadding: 2.5, textColor: dark },
+      headStyles: { fillColor: [245, 247, 250], textColor: primary, fontStyle: "bold", halign: "left" },
+      columnStyles: { 0: { cellWidth: 55, fontStyle: "bold", textColor: gray } },
+      body: [
+        [{ content: "Vehicle Type", styles: { fontStyle: "bold", textColor: gray } }, student.twoWheelerType || "—"],
+        [{ content: "Vehicle Name", styles: { fontStyle: "bold", textColor: gray } }, student.twoWheelerName],
+        [{ content: "Price", styles: { fontStyle: "bold", textColor: gray } }, formatCurrency(student.twoWheelerPrice || 0)],
+      ],
+      theme: "plain",
+      tableLineColor: [220, 220, 220],
+      tableLineWidth: 0.2,
+    });
+
+    nextY = docPdf.lastAutoTable.finalY + 6;
+  }
 
   // --- Payment Summary ---
   docPdf.setFontSize(13);
   docPdf.setTextColor(...primary);
-  docPdf.text("Payment Summary", margin, studentTableEnd);
+  docPdf.text("Payment Summary", margin, nextY);
 
   docPdf.setDrawColor(200, 200, 200);
   docPdf.setLineWidth(0.3);
-  docPdf.line(margin, studentTableEnd + 3, pageW - margin, studentTableEnd + 3);
+  docPdf.line(margin, nextY + 3, pageW - margin, nextY + 3);
 
   const feesPaid = Number(student.feesPaid || 0);
   const courseFees = Number(student.courseFees || student.totalFees || 0);
   const pendingFees = Number(student.pendingFees || student.remainingFees || 0);
   const isPaid = pendingFees <= 0;
 
+  const paymentRows = [
+    [
+      { content: "Course Fees", styles: { fontStyle: "bold", textColor: gray } },
+      formatCurrency(courseFees),
+    ],
+  ];
+
+  if (student.discountType && student.discountType !== "" && Number(student.discountValue) > 0) {
+    const discountLabel = student.discountType === "percentage"
+      ? "Discount (" + student.discountValue + "%)"
+      : "Discount (" + formatCurrency(student.discountValue) + ")";
+    const discountAmount = student.discountType === "percentage"
+      ? Math.round(courseFees * student.discountValue / 100)
+      : Number(student.discountValue);
+    paymentRows.push([
+      { content: discountLabel, styles: { fontStyle: "bold", textColor: gray } },
+      { content: "-" + formatCurrency(discountAmount), styles: { textColor: [22, 163, 74] } },
+    ]);
+  }
+
+  paymentRows.push(
+    [
+      { content: "Fees Paid", styles: { fontStyle: "bold", textColor: gray } },
+      formatCurrency(feesPaid),
+    ],
+    [
+      { content: "Pending Fees", styles: { fontStyle: "bold", textColor: gray } },
+      { content: formatCurrency(pendingFees), styles: { textColor: isPaid ? [22, 163, 74] : [220, 38, 38] } },
+    ],
+    [
+      { content: "Payment Status", styles: { fontStyle: "bold", textColor: gray } },
+      {
+        content: isPaid ? "PAID" : "PARTIALLY PAID",
+        styles: { fontStyle: "bold", fontSize: 11, textColor: isPaid ? [22, 163, 74] : [220, 38, 38] },
+      },
+    ],
+  );
+
+  if (student.feeNote) {
+    paymentRows.push([
+      { content: "Fee Note", styles: { fontStyle: "bold", textColor: gray } },
+      { content: student.feeNote, styles: { textColor: dark, fontSize: 9 } },
+    ]);
+  }
+
   autoTable(docPdf, {
-    startY: studentTableEnd + 6,
+    startY: nextY + 6,
     margin: { left: margin, right: margin },
     tableWidth: contentW,
     styles: { fontSize: 10, cellPadding: 3, textColor: dark },
     columnStyles: { 0: { cellWidth: 55, fontStyle: "bold", textColor: gray } },
-    body: [
-      [
-        { content: "Course Fees", styles: { fontStyle: "bold", textColor: gray } },
-        formatCurrency(courseFees),
-      ],
-      [
-        { content: "Fees Paid", styles: { fontStyle: "bold", textColor: gray } },
-        formatCurrency(feesPaid),
-      ],
-      [
-        { content: "Pending Fees", styles: { fontStyle: "bold", textColor: gray } },
-        { content: formatCurrency(pendingFees), styles: { textColor: isPaid ? [22, 163, 74] : [220, 38, 38] } },
-      ],
-      [
-        { content: "Payment Status", styles: { fontStyle: "bold", textColor: gray } },
-        {
-          content: isPaid ? "PAID" : "PARTIALLY PAID",
-          styles: {
-            fontStyle: "bold",
-            fontSize: 11,
-            textColor: isPaid ? [22, 163, 74] : [220, 38, 38],
-          },
-        },
-      ],
-    ],
+    body: paymentRows,
     theme: "plain",
     tableLineColor: [220, 220, 220],
     tableLineWidth: 0.2,
@@ -200,7 +273,6 @@ export async function generateInvoicePDF(student, teachers) {
   const paymentTableEnd = docPdf.lastAutoTable.finalY + 10;
 
   // --- Footer Section ---
-  // Owner signature line
   docPdf.setDrawColor(180, 180, 180);
   docPdf.setLineWidth(0.5);
   docPdf.line(margin, paymentTableEnd + 20, margin + 55, paymentTableEnd + 20);
@@ -208,7 +280,6 @@ export async function generateInvoicePDF(student, teachers) {
   docPdf.setTextColor(...gray);
   docPdf.text("Owner Signature", margin, paymentTableEnd + 26);
 
-  // Thank you message
   docPdf.setFontSize(12);
   docPdf.setTextColor(...primary);
   docPdf.text("Thank you for choosing " + SCHOOL.name + "!", margin, paymentTableEnd + 40);
@@ -217,13 +288,11 @@ export async function generateInvoicePDF(student, teachers) {
   docPdf.setTextColor(...gray);
   docPdf.text("For any queries, please contact us at " + SCHOOL.phone + " or " + SCHOOL.email, margin, paymentTableEnd + 46);
 
-  // Terms note at bottom
   docPdf.setFontSize(8);
   docPdf.setTextColor(160, 160, 160);
   docPdf.text("This is a computer-generated invoice.", margin, 285);
   docPdf.text("Invoice No: " + invoiceNo + "  |  Date: " + formatDate(), margin, 290);
 
-  // Save PDF
   const filename = "Invoice_" + invoiceNo + "_" + (student.name || "Student").replace(/\s+/g, "_") + ".pdf";
   docPdf.save(filename);
 }

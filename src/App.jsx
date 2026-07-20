@@ -4,10 +4,12 @@ import { enableNetwork, disableNetwork } from "firebase/firestore";
 import { AuthProvider } from "./context/AuthContext";
 import { BranchProvider } from "./context/BranchContext";
 import { NotificationProvider } from "./context/NotificationContext";
+import ErrorBoundary from "./components/ErrorBoundary";
 import ProtectedRoute from "./components/ProtectedRoute";
 import LoginPage from "./components/LoginPage";
 import OwnerDashboard from "./components/OwnerDashboard";
 import TeacherDashboard from "./components/TeacherDashboard";
+import ReceptionDashboard from "./components/ReceptionDashboard";
 import ClientDashboard from "./components/ClientDashboard";
 import { db } from "./firebase";
 
@@ -57,6 +59,7 @@ function ConnectivityBanner() {
 
 export default function App() {
   return (
+    <ErrorBoundary>
     <AuthProvider>
       <BranchProvider>
       <NotificationProvider>
@@ -80,6 +83,14 @@ export default function App() {
             }
           />
           <Route
+            path="/reception-dashboard"
+            element={
+              <ProtectedRoute allowedRole="reception">
+                <ReceptionDashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/client-dashboard"
             element={
               <ProtectedRoute allowedRole="client">
@@ -92,5 +103,6 @@ export default function App() {
       </NotificationProvider>
       </BranchProvider>
     </AuthProvider>
+    </ErrorBoundary>
   );
 }

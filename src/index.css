@@ -78,6 +78,7 @@ body {
   animation: spin 0.7s linear infinite;
 }
 @keyframes spin { to { transform: rotate(360deg); } }
+@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
 .table-loader { display: flex; justify-content: center; padding: 48px 0; }
 .empty-state { text-align: center; padding: 48px 20px; color: var(--gray-400); font-size: 15px; }
 
@@ -615,6 +616,59 @@ textarea.form-input {
   margin-top: 2px;
 }
 
+/* Inquiry Autofill Dropdown */
+.inquiry-name-wrapper {
+  position: relative;
+}
+
+.inquiry-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  background: #fff;
+  border: 1px solid var(--gray-300);
+  border-radius: 0 0 var(--radius) var(--radius);
+  max-height: 200px;
+  overflow-y: auto;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.inquiry-dropdown-item {
+  padding: 10px 12px;
+  cursor: pointer;
+  border-bottom: 1px solid var(--gray-200);
+  transition: background 0.15s;
+}
+
+.inquiry-dropdown-item:last-child { border-bottom: none; }
+
+.inquiry-dropdown-item:hover {
+  background: var(--accent-light);
+}
+
+.inquiry-dropdown-name {
+  font-weight: 500;
+  font-size: 14px;
+}
+
+.inquiry-dropdown-detail {
+  font-size: 12px;
+  color: var(--gray-500);
+  margin-top: 2px;
+}
+
+.inquiry-badge {
+  display: inline-block;
+  background: var(--accent-light);
+  color: var(--primary);
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 20px;
+  margin-left: 8px;
+}
+
 /* Course Details Card */
 .course-details-card {
   margin-top: 16px;
@@ -838,9 +892,11 @@ textarea.form-input {
 }
 
 .mobile-logout-btn { display: none !important; }
+.hamburger-btn { display: none; background: none; border: none; cursor: pointer; color: var(--gray-600); padding: 4px; align-items: center; justify-content: center; }
 
 @media (max-width: 767px) {
   .mobile-logout-btn { display: inline-flex !important; }
+  .hamburger-btn { display: flex; }
   .sidebar {
     transform: translateX(-100%);
     width: 85vw;
@@ -1067,4 +1123,22 @@ textarea.form-input {
   .followup-grid {
     grid-template-columns: 1fr;
   }
+}
+
+/* License Reminder Table */
+.reminder-table th {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--gray-500);
+  background: var(--gray-50);
+}
+
+.reminder-table tbody tr:hover {
+  background: var(--accent-light);
+}
+
+.reminder-table .btn-sm {
+  white-space: nowrap;
 }

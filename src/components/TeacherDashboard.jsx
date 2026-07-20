@@ -1,14 +1,15 @@
 import { useState, useEffect, useCallback } from "react";
 import { signOut } from "firebase/auth";
 import { useNavigate } from "react-router-dom";
-import { auth } from "../firebase";
+import { doc, getDoc, collection, query, where } from "firebase/firestore";
+import { auth, db } from "../firebase";
 import { useAuth } from "../context/AuthContext";
 import { useNotification } from "../context/NotificationContext";
 import { useBranch } from "../context/BranchContext";
 import { getStudentsByTeacher } from "../services/studentService";
-import { markAttendance, getAttendanceForDate } from "../services/attendanceService";
-import { LayoutDashboard, Users, ClipboardList, Calendar, Car, Phone, User, BookOpen } from "lucide-react";
-import { SCHOOL } from "../config/schoolConfig";
+import { markAttendance, startTraining, isMonday, computeStatus } from "../services/attendanceService";
+import { LayoutDashboard, Users, ClipboardList, Calendar, Car, Phone, User, BookOpen, Wallet, Play, AlertTriangle } from "lucide-react";
+import { SCHOOL, TRAINING_DAYS, VALIDITY_DAYS, getCourseTotalClasses } from "../config/schoolConfig";
 
 export default function TeacherDashboard() {
   const { user } = useAuth();
@@ -23,6 +24,9 @@ export default function TeacherDashboard() {
   const [attendanceMap, setAttendanceMap] = useState({});
   const [markingId, setMarkingId] = useState(null);
   const [search, setSearch] = useState("");
+  const [teacherData, setTeacherData] = useState(null);
+  const [startTrainingStudent, setStartTrainingStudent] = useState(null);
+  const [trainingStartDate, setTrainingStartDate] = useState(new Date().toISOString().split("T")[0]);
 
   const loadStudents = useCallback(async () => {
     setLoading(true);
@@ -35,6 +39,14 @@ export default function TeacherDashboard() {
 
   useEffect(() => { loadStudents(); }, [loadStudents]);
 
+  useEffect(() => {
+    if (user?.uid) {
+      getDoc(doc(db, "teachers", user.uid)).then((snap) => {
+        if (snap.exists()) setTeacherData(snap.data());
+      }).catch(() => {});
+    }
+  }, [user]);
+
   const filtered = students.filter((s) =>
     s.name?.toLowerCase().includes(search.toLowerCase()) ||
     s.phone?.includes(search)
@@ -42,20 +54,39 @@ export default function TeacherDashboard() {
 
   useEffect(() => {
     const loadAttendance = async () => {
-      const map = {};
-      for (const s of students) {
-        const rec = await getAttendanceForDate(s.id, selectedDate);
-        if (rec) map[s.id] = rec.present;
-      }
-      setAttendanceMap(map);
+      if (!teacherData?.branchId || !students.length) return;
+      try {
+        const q = query(
+          collection(db, "attendance"),
+          where("date", "==", selectedDate),
+          where("branchId", "==", teacherData.branchId)
+        );
+        const snap = await getDocs(q);
+        const map = {};
+        snap.docs.forEach((d) => {
+          const data = d.data();
+          map[data.studentId] = data.present;
+        });
+        setAttendanceMap(map);
+      } catch { setAttendanceMap({}); }
     };
-    if (students.length) loadAttendance();
-  }, [selectedDate, students]);
+    loadAttendance();
+  }, [selectedDate, students, teacherData]);
+
+  const handleStartTraining = async () => {
+    if (!startTrainingStudent || !trainingStartDate) return;
+    try {
+      await startTraining(startTrainingStudent.id, trainingStartDate);
+      setStartTrainingStudent(null);
+      await loadStudents();
+      addNotification("Training started successfully!");
+    } catch { addNotification("Failed to start training", "error"); }
+  };
 
   const handleAttendance = async (studentId, present) => {
     setMarkingId(studentId);
     try {
-      await markAttendance(studentId, selectedDate, present);
+      await markAttendance(studentId, selectedDate, present, teacherData?.branchId);
       setAttendanceMap((prev) => ({ ...prev, [studentId]: present }));
       addNotification(`Marked ${present ? "present" : "absent"}`);
     } catch { addNotification("Failed to mark attendance", "error"); }
@@ -71,6 +102,7 @@ export default function TeacherDashboard() {
     { key: "dashboard", label: "Dashboard", icon: LayoutDashboard },
     { key: "students", label: "Students", icon: Users },
     { key: "attendance", label: "Attendance", icon: ClipboardList },
+    { key: "salary", label: "Salary", icon: Wallet },
   ];
 
   return (
@@ -78,7 +110,7 @@ export default function TeacherDashboard() {
       <aside className={`sidebar ${sidebarOpen ? "open" : ""}`}>
         <div className="sidebar-brand">
           <span className="sidebar-logo"><Car size={28} /></span>
-          <span>{SCHOOL.shortName}</span>
+          <span>{SCHOOL.name}</span>
         </div>
         <nav className="sidebar-nav">
           {navItems.map((item) => (
@@ -114,6 +146,7 @@ export default function TeacherDashboard() {
             {view === "dashboard" && "Teacher Dashboard"}
             {view === "students" && "My Students"}
             {view === "attendance" && "Mark Attendance"}
+            {view === "salary" && "My Salary"}
           </h1>
           <div className="topbar-right">
             <span className="user-badge teacher-badge">Teacher</span>
@@ -123,7 +156,7 @@ export default function TeacherDashboard() {
         <main className="main-content">
           {view === "dashboard" && (
             <>
-              <div className="stats-grid">
+                <div className="stats-grid">
                 <div className="stat-card">
                   <div className="stat-icon stat-icon-blue"><Users size={24} /></div>
                   <div className="stat-body">
@@ -134,26 +167,22 @@ export default function TeacherDashboard() {
                 <div className="stat-card">
                   <div className="stat-icon stat-icon-green"><ClipboardList size={24} /></div>
                   <div className="stat-body">
-                    <h3>Today's Attendance</h3>
-                    <p className="stat-number">{Object.values(attendanceMap).filter(Boolean).length}</p>
+                    <h3>Active Training</h3>
+                    <p className="stat-number">{students.filter((s) => (s.trainingStatus || computeStatus(s)) === "active").length}</p>
                   </div>
                 </div>
                 <div className="stat-card">
                   <div className="stat-icon stat-icon-purple"><Calendar size={24} /></div>
                   <div className="stat-body">
-                    <h3>Active Students</h3>
-                    <p className="stat-number">{students.filter((s) => s.status === "active").length}</p>
+                    <h3>Completed</h3>
+                    <p className="stat-number">{students.filter((s) => (s.trainingStatus || computeStatus(s)) === "completed").length}</p>
                   </div>
                 </div>
                 <div className="stat-card">
                   <div className="stat-icon stat-icon-red"><LayoutDashboard size={24} /></div>
                   <div className="stat-body">
-                    <h3>Avg Attendance</h3>
-                    <p className="stat-number">
-                      {students.length
-                        ? `${Math.round(students.reduce((s, x) => s + (x.attendanceDays || 0), 0) / students.length)}d`
-                        : "0d"}
-                    </p>
+                    <h3>Not Started</h3>
+                    <p className="stat-number">{students.filter((s) => (s.trainingStatus || computeStatus(s)) === "not_started").length}</p>
                   </div>
                 </div>
               </div>
@@ -184,49 +213,66 @@ export default function TeacherDashboard() {
               ) : filtered.length === 0 ? (
                 <div className="empty-state">No students found.</div>
               ) : (
-                <div className="responsive-table-container">
-                  <div className="desktop-table">
-                    <div className="table-wrapper">
-                      <table className="data-table">
-                        <thead>
-                          <tr>
-                            <th>Name</th>
-                            <th>Phone</th>
-                            <th>Course</th>
-                            <th>Attendance</th>
-                            <th>Status</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {filtered.map((s) => (
-                            <tr key={s.id}>
-                              <td className="td-name">{s.name}</td>
-                              <td className="td-phone">{s.phone}</td>
-                              <td><span className="badge badge-course td-course" title={s.course}>{s.course}</span></td>
-                              <td className="td-attendance">{s.attendanceDays || 0}</td>
-                              <td className="td-status">
-                                <span className={`badge ${s.status === "active" ? "badge-success" : "badge-danger"}`}>
-                                  {s.status}
-                                </span>
-                              </td>
+                  <div className="responsive-table-container">
+                    <div className="desktop-table">
+                      <div className="table-wrapper">
+                        <table className="data-table">
+                          <thead>
+                            <tr>
+                              <th>Name</th>
+                              <th>Phone</th>
+                              <th>Course</th>
+                              <th>Attendance</th>
+                              <th>Pending Fees</th>
+                              <th>Status</th>
                             </tr>
-                          ))}
-                        </tbody>
-                      </table>
+                          </thead>
+                          <tbody>
+                            {filtered.map((s) => {
+                              const tStatus = s.trainingStatus || computeStatus(s);
+                              const tProgress = Number(s.trainingProgress) || 0;
+                              const pending = s.pendingFees ?? (s.courseFees || 0) - (s.feesPaid || 0);
+                              return (
+                              <tr key={s.id}>
+                                <td className="td-name">{s.name}</td>
+                                <td className="td-phone">{s.phone}</td>
+                                <td><span className="badge badge-course td-course" title={s.course}>{s.course}</span></td>
+<td className="td-attendance">{tProgress}/{getCourseTotalClasses(s.courseId)}</td>
+                                <td className="td-fees">
+                                  <span style={{ color: pending > 0 ? "#DC2626" : "#059669", fontWeight: 600 }}>
+                                    ₹{pending.toLocaleString()}
+                                  </span>
+                                </td>
+                                <td className="td-status">
+                                  <span className={`badge ${tStatus === "active" ? "badge-success" : tStatus === "completed" ? "badge-success" : tStatus === "expired" ? "badge-danger" : "badge-warning"}`}>
+                                    {tStatus === "not_started" ? "Not Started" : tStatus === "active" ? "Active" : tStatus === "completed" ? "Completed" : "Expired"}
+                                  </span>
+                                </td>
+                              </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                    <div className="mobile-cards">
+                      {filtered.map((s) => {
+                        const tStatus = s.trainingStatus || computeStatus(s);
+                        const tProgress = Number(s.trainingProgress) || 0;
+                        const pending = s.pendingFees ?? (s.courseFees || 0) - (s.feesPaid || 0);
+                        return (
+                        <div key={s.id} className="data-card">
+                          <div className="data-card-row"><span className="data-card-label"><User size={14} /></span><span className="data-card-value">{s.name}</span></div>
+                          <div className="data-card-row"><span className="data-card-label"><Phone size={14} /></span><span className="data-card-value">{s.phone}</span></div>
+                          <div className="data-card-row"><span className="data-card-label"><BookOpen size={14} /></span><span className="data-card-value">{s.course}</span></div>
+                          <div className="data-card-row"><span className="data-card-label"><ClipboardList size={14} /></span><span className="data-card-value">{tProgress}/{getCourseTotalClasses(s.courseId)} days</span></div>
+                          <div className="data-card-row"><span className="data-card-label"><Wallet size={14} /> Pending Fees</span><span style={{ color: pending > 0 ? "#DC2626" : "#059669", fontWeight: 600 }}>₹{pending.toLocaleString()}</span></div>
+                          <div className="data-card-row"><span className="data-card-label">Status</span><span className={`badge ${tStatus === "active" ? "badge-success" : tStatus === "completed" ? "badge-success" : tStatus === "expired" ? "badge-danger" : "badge-warning"}`}>{tStatus === "not_started" ? "Not Started" : tStatus === "active" ? "Active" : tStatus === "completed" ? "Completed" : "Expired"}</span></div>
+                        </div>
+                        );
+                      })}
                     </div>
                   </div>
-                  <div className="mobile-cards">
-                    {filtered.map((s) => (
-                      <div key={s.id} className="data-card">
-                        <div className="data-card-row"><span className="data-card-label"><User size={14} /></span><span className="data-card-value">{s.name}</span></div>
-                        <div className="data-card-row"><span className="data-card-label"><Phone size={14} /></span><span className="data-card-value">{s.phone}</span></div>
-                        <div className="data-card-row"><span className="data-card-label"><BookOpen size={14} /></span><span className="data-card-value">{s.course}</span></div>
-                        <div className="data-card-row"><span className="data-card-label"><ClipboardList size={14} /></span><span className="data-card-value">{s.attendanceDays || 0} days</span></div>
-                        <div className="data-card-row"><span className="data-card-label">Status</span><span className={`badge ${s.status === "active" ? "badge-success" : "badge-danger"}`}>{s.status}</span></div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
               )}
             </div>
           )}
@@ -242,6 +288,12 @@ export default function TeacherDashboard() {
                   onChange={(e) => setSelectedDate(e.target.value)}
                 />
               </div>
+              {isMonday(selectedDate) && (
+                <div className="empty-state" style={{ padding: 12, margin: "0 0 12px", background: "#fef3cd", borderRadius: 8, border: "1px solid #ffc107" }}>
+                  <AlertTriangle size={18} style={{ marginRight: 8, color: "#856404" }} />
+                  <span style={{ color: "#856404", fontSize: 14 }}>Mondays are holidays. Attendance cannot be marked.</span>
+                </div>
+              )}
               {loading ? (
                 <div className="table-loader"><div className="spinner" /></div>
               ) : students.length === 0 ? (
@@ -253,47 +305,121 @@ export default function TeacherDashboard() {
                       <tr>
                         <th>Name</th>
                         <th>Course</th>
+                        <th>Progress</th>
                         <th>Status</th>
                         <th>Action</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {students.map((s) => (
+                      {students.map((s) => {
+                        const tStatus = s.trainingStatus || computeStatus(s);
+                        const tProgress = Number(s.trainingProgress) || 0;
+                        return (
                         <tr key={s.id}>
                           <td className="td-name">{s.name}</td>
                           <td><span className="badge badge-course td-course" title={s.course}>{s.course}</span></td>
+                          <td className="td-attendance">{tProgress}/{getCourseTotalClasses(s.courseId)}</td>
                           <td className="td-status">
-                            {attendanceMap[s.id] === undefined ? (
-                              <span className="badge badge-warning">Not marked</span>
-                            ) : attendanceMap[s.id] ? (
-                              <span className="badge badge-success">Present</span>
+                            {tStatus === "not_started" ? (
+                              <span className="badge badge-warning">Not Started</span>
+                            ) : tStatus === "active" ? (
+                              <span className="badge badge-success">Active</span>
+                            ) : tStatus === "completed" ? (
+                              <span className="badge badge-success">Completed</span>
                             ) : (
-                              <span className="badge badge-danger">Absent</span>
+                              <span className="badge badge-danger">Expired</span>
                             )}
                           </td>
                           <td className="td-actions">
-                            <div className="action-btns attendance-actions">
-                              <button
-                                className="btn btn-sm btn-success"
-                                disabled={markingId === s.id}
-                                onClick={() => handleAttendance(s.id, true)}
-                              >
-                                Present
+                            {tStatus === "not_started" ? (
+                              <button className="btn btn-sm btn-primary" onClick={() => { setStartTrainingStudent(s); setTrainingStartDate(new Date().toISOString().split("T")[0]); }}>
+                                <Play size={14} /> Start Training
                               </button>
-                              <button
-                                className="btn btn-sm btn-danger"
-                                disabled={markingId === s.id}
-                                onClick={() => handleAttendance(s.id, false)}
-                              >
-                                Absent
-                              </button>
-                            </div>
+                            ) : tStatus === "active" ? (
+                              <div className="action-btns attendance-actions">
+                                <button
+                                  className="btn btn-sm btn-success"
+                                  disabled={markingId === s.id || isMonday(selectedDate)}
+                                  onClick={() => handleAttendance(s.id, true)}
+                                >
+                                  Present
+                                </button>
+                                <button
+                                  className="btn btn-sm btn-danger"
+                                  disabled={markingId === s.id || isMonday(selectedDate)}
+                                  onClick={() => handleAttendance(s.id, false)}
+                                >
+                                  Absent
+                                </button>
+                              </div>
+                            ) : tStatus === "completed" ? (
+                              <span className="badge badge-success">✅ Completed</span>
+                            ) : (
+                              <span className="badge badge-danger">⛔ Expired</span>
+                            )}
                           </td>
                         </tr>
-                      ))}
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>
+              )}
+            </div>
+          )}
+
+          {/* Start Training Modal */}
+          {startTrainingStudent && (
+            <div className="modal-overlay" onClick={() => setStartTrainingStudent(null)}>
+              <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 400 }}>
+                <h3>Start Training</h3>
+                <p style={{ margin: "8px 0", fontSize: 14, color: "var(--gray-600)" }}>
+                  Starting training for <strong>{startTrainingStudent.name}</strong>
+                </p>
+                <div className="form-group" style={{ marginTop: 12 }}>
+                  <label>Training Start Date</label>
+                  <input
+                    className="form-input"
+                    type="date"
+                    value={trainingStartDate}
+                    onChange={(e) => setTrainingStartDate(e.target.value)}
+                  />
+                </div>
+                <p style={{ fontSize: 12, color: "var(--gray-500)", marginTop: 8 }}>
+                  Maximum valid date will be {trainingStartDate ? (() => { const d = new Date(trainingStartDate + "T00:00:00"); d.setDate(d.getDate() + VALIDITY_DAYS); return d.toISOString().split("T")[0]; })() : "—"} ({VALIDITY_DAYS} days from start)
+                </p>
+                <div className="form-actions" style={{ marginTop: 16 }}>
+                  <button className="btn btn-primary" onClick={handleStartTraining}>Confirm Start</button>
+                  <button className="btn btn-secondary" onClick={() => setStartTrainingStudent(null)}>Cancel</button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {view === "salary" && (
+            <div className="card">
+              <div className="card-header">
+                <h2>My Salary</h2>
+              </div>
+              {!teacherData ? (
+                <div className="table-loader"><div className="spinner" /></div>
+              ) : teacherData.salary ? (
+                <div className="detail-grid" style={{ marginTop: 16 }}>
+                  <div className="detail-item">
+                    <span className="detail-label">Teacher Name</span>
+                    <span className="detail-value">{teacherData.name}</span>
+                  </div>
+                  <div className="detail-item">
+                    <span className="detail-label">Monthly Salary</span>
+                    <span className="detail-value" style={{ fontSize: 24, fontWeight: 700, color: "var(--primary)" }}>
+                      ₹{Number(teacherData.salary).toLocaleString()}
+                    </span>
+                  </div>
+                </div>
+              ) : (
+                <p style={{ color: "var(--gray-500)", padding: "32px 0", textAlign: "center" }}>
+                  Salary has not been set yet. Contact the owner.
+                </p>
               )}
             </div>
           )}

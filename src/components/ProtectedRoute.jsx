@@ -18,6 +18,7 @@ export default function ProtectedRoute({ children, allowedRole }) {
     const redirectMap = {
       owner: "/owner-dashboard",
       teacher: "/teacher-dashboard",
+      reception: "/reception-dashboard",
       client: "/client-dashboard",
     };
     return <Navigate to={redirectMap[userRole] || "/login"} replace />;

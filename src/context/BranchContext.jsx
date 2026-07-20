@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect } from "react";
-import { collection, getDocs, query, orderBy } from "firebase/firestore";
+import { collection, query, orderBy, onSnapshot } from "firebase/firestore";
 import { db } from "../firebase";
 
 const BranchContext = createContext(null);
@@ -15,15 +15,15 @@ export function BranchProvider({ children }) {
   });
 
   useEffect(() => {
-    const load = async () => {
-      try {
-        const snap = await getDocs(query(collection(db, "branches"), orderBy("name")));
-        const list = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-        setBranches(list);
-        setBranchesLoaded(true);
-      } catch { setBranchesLoaded(true); }
-    };
-    load();
+    const q = query(collection(db, "branches"), orderBy("name"));
+    const unsub = onSnapshot(q, (snap) => {
+      const list = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      setBranches(list);
+      setBranchesLoaded(true);
+    }, () => {
+      setBranchesLoaded(true);
+    });
+    return () => unsub();
   }, []);
 
   useEffect(() => {

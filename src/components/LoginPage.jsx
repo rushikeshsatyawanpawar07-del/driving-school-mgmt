@@ -9,6 +9,7 @@ import { SCHOOL } from "../config/schoolConfig";
 const roles = [
   { value: "owner", label: "Owner" },
   { value: "teacher", label: "Teacher" },
+  { value: "reception", label: "Reception" },
   { value: "client", label: "Client" },
 ];
 
@@ -54,8 +55,9 @@ export default function LoginPage() {
       return;
     }
     const branchIds = userData.accessibleBranchIds || [];
+    const dashPath = (r) => ({ owner: "/owner-dashboard", teacher: "/teacher-dashboard", reception: "/reception-dashboard" })[r] || "/login";
     if (branchIds.length === 0) {
-      navigate(role === "owner" ? "/owner-dashboard" : "/teacher-dashboard", { replace: true });
+      navigate(dashPath(role), { replace: true });
       return;
     }
     const branchData = [];
@@ -64,12 +66,12 @@ export default function LoginPage() {
       if (snap.exists()) branchData.push({ id, ...snap.data() });
     }
     if (branchData.length === 0) {
-      navigate(role === "owner" ? "/owner-dashboard" : "/teacher-dashboard", { replace: true });
+      navigate(dashPath(role), { replace: true });
       return;
     }
     if (branchData.length === 1) {
       setSelectedBranch(branchData[0]);
-      const redirectMap = { owner: "/owner-dashboard", teacher: "/teacher-dashboard" };
+      const redirectMap = { owner: "/owner-dashboard", teacher: "/teacher-dashboard", reception: "/reception-dashboard" };
       navigate(redirectMap[role], { replace: true });
       return;
     }
@@ -83,7 +85,7 @@ export default function LoginPage() {
     setSelectedBranch(branch);
     setSelectingBranch(false);
     setPendingUser(null);
-    const redirectMap = { owner: "/owner-dashboard", teacher: "/teacher-dashboard" };
+    const redirectMap = { owner: "/owner-dashboard", teacher: "/teacher-dashboard", reception: "/reception-dashboard" };
     navigate(redirectMap[pendingRole], { replace: true });
   };
 
@@ -96,12 +98,13 @@ export default function LoginPage() {
     }
     setLoading(true);
     try {
-      const userCred = await signInWithEmailAndPassword(auth, email, password);
+      const loginEmail = selectedRole === "client" ? `${email.toLowerCase()}@s.drive` : email;
+      const userCred = await signInWithEmailAndPassword(auth, loginEmail, password);
       await redirectAfterLogin(userCred.user, selectedRole);
     } catch (err) {
       const msg =
         err.code === "auth/invalid-credential"
-          ? "Invalid email or password."
+          ? "Invalid Student ID or Phone Number."
           : err.message || "Login failed. Check Firebase authorized domains.";
       setError(msg);
     } finally {
@@ -114,7 +117,7 @@ export default function LoginPage() {
       <div className="login-page">
         <div className="login-card">
           <div className="login-header">
-            <h1>{SCHOOL.shortName}</h1>
+            <h1>{SCHOOL.name}</h1>
             <p>Select a branch to continue</p>
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
@@ -138,18 +141,20 @@ export default function LoginPage() {
     <div className="login-page">
       <div className="login-card">
         <div className="login-header">
-            <div className="login-icon" style={{ display: "flex", justifyContent: "center" }}><img src="/logo.png" alt={SCHOOL.shortName} style={{ width: 80, height: 80, objectFit: "contain" }} /></div>
-          <h1>{SCHOOL.shortName}</h1>
+            <div className="login-icon" style={{ display: "flex", justifyContent: "center" }}><img src="/logo.jpeg" alt={SCHOOL.name} style={{ width: 200, height: 200, objectFit: "contain" }} /></div>
+          <h1>{SCHOOL.name}</h1>
           <p>Sign in to your account</p>
         </div>
 
         <form onSubmit={handleLogin}>
           <div className="form-group">
-            <label htmlFor="email">Email</label>
+            <label htmlFor="email">
+              {selectedRole === "client" ? "Student ID" : "Email"}
+            </label>
             <input
               id="email"
-              type="email"
-              placeholder="you@example.com"
+              type={selectedRole === "client" ? "text" : "email"}
+              placeholder={selectedRole === "client" ? "e.g. DH1001" : "you@example.com"}
               value={email}
               onChange={(e) => setEmail(e.target.value)}
             />
@@ -158,12 +163,12 @@ export default function LoginPage() {
           <div className="form-group">
             <label htmlFor="password">
               Password
-              {selectedRole === "client" && <span style={{ fontSize: 12, color: "var(--orange)", marginLeft: 8, fontWeight: 400 }}>(Use Student ID)</span>}
+              {selectedRole === "client" && <span style={{ fontSize: 12, color: "var(--orange)", marginLeft: 8, fontWeight: 400 }}>(Use Phone Number)</span>}
             </label>
             <input
               id="password"
               type="password"
-              placeholder={selectedRole === "client" ? "Enter Student ID" : "••••••••"}
+              placeholder={selectedRole === "client" ? "Enter Phone Number" : "••••••••"}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
             />

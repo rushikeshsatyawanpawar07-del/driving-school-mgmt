@@ -1,56 +1,126 @@
-import {
-  collection, addDoc, getDocs, query, where,
-  getDoc, doc, updateDoc, deleteDoc, serverTimestamp
-} from "firebase/firestore";
-import { db } from "../firebase";
+import { TRAINING_DAYS, VALIDITY_DAYS, getCourseTotalClasses } from "../config/schoolConfig";
+import { checkCourseCompletion } from "./licenseReminderService";
 
 const ATTENDANCE = "attendance";
 const STUDENTS = "students";
 
-export async function markAttendance(studentId, date, present) {
+export function isMonday(dateStr) {
+  return new Date(dateStr + "T00:00:00").getDay() === 1;
+}
+
+function addDays(dateStr, days) {
+  const d = new Date(dateStr + "T00:00:00");
+  d.setDate(d.getDate() + days);
+  return d.toISOString().split("T")[0];
+}
+
+export function computeStatus(student) {
+  const progress = Number(student.trainingProgress) || 0;
+  const maxDate = student.maximumValidDate;
+  const today = new Date().toISOString().split("T")[0];
+  const totalClasses = getCourseTotalClasses(student.courseId);
+
+  if (!student.trainingStartDate) return "not_started";
+  if (progress >= totalClasses) return "completed";
+  if (today > maxDate) return "expired";
+  return "active";
+}
+
+export async function startTraining(studentId, startDate) {
+  const maxDate = addDays(startDate, VALIDITY_DAYS);
+  await updateDoc(doc(db, STUDENTS, studentId), {
+    trainingStartDate: startDate,
+    maximumValidDate: maxDate,
+    trainingProgress: 0,
+    trainingStatus: "active",
+  });
+}
+
+export async function markAttendance(studentId, date, present, branchId) {
+  if (isMonday(date)) throw new Error("Mondays are holidays. Cannot mark attendance.");
+
+  const studentSnap = await getDoc(doc(db, STUDENTS, studentId));
+  if (!studentSnap.exists()) throw new Error("Student not found");
+  const student = studentSnap.data();
+
+  if (!student.trainingStartDate) throw new Error("Training has not started yet.");
+
+  const totalClasses = getCourseTotalClasses(student.courseId);
+  const status = computeStatus(student);
+  if (status === "completed") throw new Error("Course already completed.");
+  if (status === "expired") throw new Error("Training validity expired. Penalty required.");
+
   const q = query(
     collection(db, ATTENDANCE),
     where("studentId", "==", studentId),
-    where("date", "==", date)
+    where("date", "==", date),
+    where("branchId", "==", branchId)
   );
   const snap = await getDocs(q);
 
   if (snap.empty) {
     await addDoc(collection(db, ATTENDANCE), {
-      studentId,
-      date,
-      present,
+      studentId, date, present, branchId, clientAuthUid: student.clientAuthUid,
       createdAt: serverTimestamp(),
     });
   } else {
     const attDoc = snap.docs[0];
-    await updateDoc(doc(db, ATTENDANCE, attDoc.id), { present });
+    await updateDoc(doc(db, ATTENDANCE, attDoc.id), { present, branchId });
   }
 
-  const studentSnap = await getDoc(doc(db, STUDENTS, studentId));
-  if (studentSnap.exists()) {
-    const allAtt = query(collection(db, ATTENDANCE), where("studentId", "==", studentId));
-    const allSnap = await getDocs(allAtt);
-    const presentDays = allSnap.docs.filter((d) => d.data().present === true).length;
-    await updateDoc(doc(db, STUDENTS, studentId), { attendanceDays: presentDays });
-  }
+  const allAtt = await getDocs(query(
+    collection(db, ATTENDANCE),
+    where("studentId", "==", studentId),
+    where("branchId", "==", branchId)
+  ));
+  const presentDays = allAtt.docs.filter((d) => d.data().present === true).length;
+  const newProgress = Math.min(presentDays, totalClasses);
+  const newStatus = newProgress >= totalClasses ? "completed" : computeStatus({ ...student, trainingProgress: newProgress });
+
+  await updateDoc(doc(db, STUDENTS, studentId), {
+    trainingProgress: newProgress,
+    trainingStatus: newStatus,
+  });
+
+  checkCourseCompletion(studentId).catch(() => {});
 }
 
-export async function getAttendance(studentId) {
+export async function getAttendance(studentId, branchId) {
   const q = query(
     collection(db, ATTENDANCE),
-    where("studentId", "==", studentId)
+    where("studentId", "==", studentId),
+    where("branchId", "==", branchId)
   );
   const snap = await getDocs(q);
   return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
 }
 
-export async function getAttendanceForDate(studentId, date) {
+export async function getAttendanceForDate(studentId, date, branchId) {
   const q = query(
     collection(db, ATTENDANCE),
     where("studentId", "==", studentId),
-    where("date", "==", date)
+    where("date", "==", date),
+    where("branchId", "==", branchId)
   );
   const snap = await getDocs(q);
   return snap.empty ? null : { id: snap.docs[0].id, ...snap.docs[0].data() };
+}
+
+export async function migrateAttendanceClientAuth() {
+  const snap = await getDocs(collection(db, ATTENDANCE));
+  const batch = [];
+  for (const docSnap of snap.docs) {
+    const data = docSnap.data();
+    if (data.clientAuthUid) continue;
+    if (!data.studentId) continue;
+    try {
+      const studentSnap = await getDoc(doc(db, STUDENTS, data.studentId));
+      if (studentSnap.exists() && studentSnap.data().clientAuthUid) {
+        batch.push(
+          updateDoc(doc(db, ATTENDANCE, docSnap.id), { clientAuthUid: studentSnap.data().clientAuthUid })
+        );
+      }
+    } catch { /* skip */ }
+  }
+  await Promise.all(batch);
 }
