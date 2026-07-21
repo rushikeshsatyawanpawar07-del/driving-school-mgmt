@@ -270,7 +270,7 @@ export default function ReceptionDashboard() {
     setSaving(true);
     try {
       if (editingStudent) {
-        await updateStudent(editingStudent, payload);
+        await updateStudent(editingStudent.id, payload);
         addNotification("Student updated");
       } else {
         const inquiryId = payload.matchedInquiryId;

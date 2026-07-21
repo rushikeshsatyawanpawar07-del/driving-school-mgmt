@@ -1,5 +1,7 @@
 import { TRAINING_DAYS, VALIDITY_DAYS, getCourseTotalClasses } from "../config/schoolConfig";
 import { checkCourseCompletion } from "./licenseReminderService";
+import { db } from "../firebase";
+import { doc, getDoc, getDocs, updateDoc, addDoc, collection, query, where, serverTimestamp } from "firebase/firestore";
 
 const ATTENDANCE = "attendance";
 const STUDENTS = "students";
@@ -18,7 +20,7 @@ export function computeStatus(student) {
   const progress = Number(student.trainingProgress) || 0;
   const maxDate = student.maximumValidDate;
   const today = new Date().toISOString().split("T")[0];
-  const totalClasses = getCourseTotalClasses(student.courseId);
+  const totalClasses = getCourseTotalClasses(student.course);
 
   if (!student.trainingStartDate) return "not_started";
   if (progress >= totalClasses) return "completed";
@@ -45,35 +47,37 @@ export async function markAttendance(studentId, date, present, branchId) {
 
   if (!student.trainingStartDate) throw new Error("Training has not started yet.");
 
-  const totalClasses = getCourseTotalClasses(student.courseId);
+  const totalClasses = getCourseTotalClasses(student.course);
   const status = computeStatus(student);
   if (status === "completed") throw new Error("Course already completed.");
   if (status === "expired") throw new Error("Training validity expired. Penalty required.");
 
   const q = query(
     collection(db, ATTENDANCE),
-    where("studentId", "==", studentId),
-    where("date", "==", date),
-    where("branchId", "==", branchId)
+    where("studentId", "==", studentId)
   );
   const snap = await getDocs(q);
+  const todaysRecord = snap.docs.find((d) => d.data().date === date);
 
-  if (snap.empty) {
+  if (todaysRecord) {
+    await updateDoc(doc(db, ATTENDANCE, todaysRecord.id), { present, branchId: branchId || null });
+  } else {
     await addDoc(collection(db, ATTENDANCE), {
-      studentId, date, present, branchId, clientAuthUid: student.clientAuthUid,
+      studentId, date, present, branchId: branchId || null, clientAuthUid: student.clientAuthUid || null,
       createdAt: serverTimestamp(),
     });
-  } else {
-    const attDoc = snap.docs[0];
-    await updateDoc(doc(db, ATTENDANCE, attDoc.id), { present, branchId });
   }
 
-  const allAtt = await getDocs(query(
-    collection(db, ATTENDANCE),
-    where("studentId", "==", studentId),
-    where("branchId", "==", branchId)
-  ));
-  const presentDays = allAtt.docs.filter((d) => d.data().present === true).length;
+  let presentDays;
+  if (todaysRecord) {
+    presentDays = snap.docs.filter((d) => {
+      if (d.id === todaysRecord.id) return present;
+      return d.data().present === true;
+    }).length;
+  } else {
+    presentDays = snap.docs.filter((d) => d.data().present === true).length + (present ? 1 : 0);
+  }
+
   const newProgress = Math.min(presentDays, totalClasses);
   const newStatus = newProgress >= totalClasses ? "completed" : computeStatus({ ...student, trainingProgress: newProgress });
 

@@ -1,22 +1,9 @@
 import jsPDF from "jspdf";
-import autoTable from "jspdf-autotable";
 import { doc, runTransaction, serverTimestamp } from "firebase/firestore";
 import { db } from "../firebase";
 import { SCHOOL } from "../config/schoolConfig";
 
 const COUNTER_REF = doc(db, "counters", "invoiceCounter");
-
-function formatDate() {
-  const d = new Date();
-  const dd = String(d.getDate()).padStart(2, "0");
-  const mm = String(d.getMonth() + 1).padStart(2, "0");
-  const yyyy = d.getFullYear();
-  return `${dd}/${mm}/${yyyy}`;
-}
-
-function formatCurrency(n) {
-  return SCHOOL.currency + Number(n || 0).toLocaleString(SCHOOL.locale);
-}
 
 async function getNextInvoiceNumber() {
   const result = await runTransaction(db, async (transaction) => {
@@ -31,268 +18,288 @@ async function getNextInvoiceNumber() {
   return "INV-" + String(result).padStart(4, "0");
 }
 
-function getTeacherName(teachers, teacherUid) {
-  if (!teacherUid) return "Not Assigned";
-  const t = teachers.find((x) => x.id === teacherUid);
-  return t ? t.name : "Not Assigned";
+function fmtDate(dateStr) {
+  if (!dateStr) return "___ / ___ / ______";
+  const parts = dateStr.split("-");
+  if (parts.length === 3) {
+    return parts[2] + " / " + parts[1] + " / " + parts[0];
+  }
+  return dateStr;
 }
 
-export async function generateInvoicePDF(student, teachers, branchName) {
-  const invoiceNo = await getNextInvoiceNumber();
+function fmtMoney(n) {
+  return "Rs. " + Number(n || 0).toLocaleString("en-IN");
+}
+
+export async function generateInvoicePDF(student) {
+  await getNextInvoiceNumber();
   const docPdf = new jsPDF({ unit: "mm", format: "a4" });
-  const pageW = 210;
-  const margin = 20;
-  const contentW = pageW - 2 * margin;
+  const pw = 210, ph = 297, m = 15;
 
-  const primary = [79, 70, 229];
-  const gray = [100, 100, 100];
-  const dark = [50, 50, 50];
+  let dev = false;
+  try {
+    const resp = await fetch("/fonts/NotoSansDevanagari.ttf");
+    const blob = await resp.blob();
+    const reader = new FileReader();
+    await new Promise((resolve, reject) => {
+      reader.onload = () => {
+        const b64 = reader.result.split(",")[1];
+        docPdf.addFileToVFS("NotoSansDevanagari.ttf", b64);
+        docPdf.addFont("NotoSansDevanagari.ttf", "NotoSansDevanagari", "normal");
+        docPdf.addFont("NotoSansDevanagari.ttf", "NotoSansDevanagari", "bold");
+        dev = true;
+        resolve();
+      };
+      reader.onerror = resolve;
+      reader.readAsDataURL(blob);
+    });
+  } catch { /* fallback to helvetica */ }
 
-  const branchAddress = branchName ? (SCHOOL.branchAddresses[branchName] || SCHOOL.address) : SCHOOL.address;
+  docPdf.setFont("helvetica", "bold");
+  docPdf.setFontSize(10);
+  docPdf.setTextColor(0, 0, 0);
 
   try {
     const resp = await fetch("/logo.jpeg");
     const blob = await resp.blob();
     const reader = new FileReader();
     await new Promise((resolve) => {
-      reader.onload = () => { docPdf.addImage(reader.result, "PNG", margin, 15, 28, 28); resolve(); };
+      reader.onload = () => {
+        docPdf.addImage(reader.result, "JPEG", m, 10, 28, 28);
+        resolve();
+      };
       reader.onerror = resolve;
       reader.readAsDataURL(blob);
     });
-  } catch { /* skip logo */ }
+  } catch { /* skip */ }
 
-  const schoolNameMaxW = pageW - margin - (margin + 34);
-  let schoolNameSize = 22;
-  const nameLen = (SCHOOL.name || "").length;
-  if (nameLen > 25) schoolNameSize = 16;
-  else if (nameLen > 18) schoolNameSize = 18;
-
-  docPdf.setFontSize(schoolNameSize);
-  docPdf.setTextColor(...primary);
-  docPdf.text(SCHOOL.name, margin + 34, 28, { maxWidth: schoolNameMaxW });
-
-  docPdf.setFontSize(8);
-  docPdf.setTextColor(...gray);
-  docPdf.text(branchAddress, margin + 34, 34, { maxWidth: schoolNameMaxW });
-  docPdf.text("Contact Number: " + SCHOOL.ownerPhone, margin + 34, 42, { maxWidth: schoolNameMaxW });
-
-  docPdf.setDrawColor(...primary);
-  docPdf.setLineWidth(0.8);
-  docPdf.line(margin, 52, pageW - margin, 52);
-
+  docPdf.setFont("helvetica", "bold");
   docPdf.setFontSize(18);
-  docPdf.setTextColor(...primary);
-  docPdf.text("INVOICE", margin, 62);
+  docPdf.text("NEW BHARATIS DRIVING SCHOOL", pw / 2, 30, { align: "center" });
 
+  docPdf.setFont("helvetica", "normal");
+  docPdf.setFontSize(11);
+  docPdf.text(SCHOOL.address, pw / 2, 42, { align: "center" });
+
+  docPdf.setDrawColor(0, 0, 0);
+  docPdf.setLineWidth(0.6);
+  docPdf.line(m, 50, pw - m, 50);
+
+  docPdf.setFont("helvetica", "bold");
+  docPdf.setFontSize(22);
+  docPdf.text("FORM 14", pw / 2, 62, { align: "center" });
+
+  docPdf.setFont("helvetica", "normal");
   docPdf.setFontSize(10);
-  docPdf.setTextColor(...dark);
-  docPdf.text("Invoice No: " + invoiceNo, margin, 69);
-  docPdf.text("Date: " + formatDate(), margin, 75);
+  docPdf.text("(See Rule 27 a & c)", pw / 2, 70, { align: "center" });
+  docPdf.text("Register showing the enrolments of trainee(s) in the Driving School establishment", pw / 2, 78, { align: "center" });
 
-  // --- Student Info Section ---
-  docPdf.setFontSize(13);
-  docPdf.setTextColor(...primary);
-  docPdf.text("Student Information", margin, 88);
+  docPdf.setLineWidth(0.6);
+  docPdf.line(m, 82, pw - m, 82);
 
-  docPdf.setDrawColor(200, 200, 200);
+  const photoX = pw - m - 35;
+  const photoY = 86;
+  const photoW = 35;
+  const photoH = 45;
+
   docPdf.setLineWidth(0.3);
-  docPdf.line(margin, 91, pageW - margin, 91);
+  docPdf.rect(photoX, photoY, photoW, photoH);
+  docPdf.setFont("helvetica", "normal");
+  docPdf.setFontSize(9);
+  docPdf.text("Paste", photoX + photoW / 2, photoY + photoH / 2 - 6, { align: "center" });
+  docPdf.text("Passport", photoX + photoW / 2, photoY + photoH / 2, { align: "center" });
+  docPdf.text("Size Photo", photoX + photoW / 2, photoY + photoH / 2 + 6, { align: "center" });
 
-  const teacherName = getTeacherName(teachers, student.assignedTeacherId);
-  const vehicleLabel = student.selectedVehicles?.length
-    ? student.selectedVehicles.map((v) => v.name).join(", ")
-    : student.twoWheelerName || student.vehicleType || "—";
-
-  autoTable(docPdf, {
-    startY: 94,
-    margin: { left: margin, right: margin },
-    tableWidth: contentW,
-    styles: { fontSize: 10, cellPadding: 2.5, textColor: dark },
-    headStyles: { fillColor: [245, 247, 250], textColor: primary, fontStyle: "bold", halign: "left" },
-    columnStyles: { 0: { cellWidth: 55, fontStyle: "bold", textColor: gray } },
-    body: [
-      [{ content: "Student ID", styles: { fontStyle: "bold", textColor: gray } }, student.studentId || "—"],
-      [{ content: "Student Name", styles: { fontStyle: "bold", textColor: gray } }, student.name || "—"],
-      [{ content: "Phone Number", styles: { fontStyle: "bold", textColor: gray } }, student.phone || "—"],
-      [{ content: "Email", styles: { fontStyle: "bold", textColor: gray } }, student.email || "—"],
-      [{ content: "Address", styles: { fontStyle: "bold", textColor: gray } }, student.permanentAddress || student.address || "—"],
-      [{ content: "Course", styles: { fontStyle: "bold", textColor: gray } }, student.course || "—"],
-      [{ content: "Joining Date", styles: { fontStyle: "bold", textColor: gray } }, student.joiningDate || "—"],
-      [{ content: "Assigned Teacher", styles: { fontStyle: "bold", textColor: gray } }, teacherName],
-      [{ content: "Batch", styles: { fontStyle: "bold", textColor: gray } }, student.batch + (student.batchTime ? " (" + student.batchTime + ")" : "") || "—"],
-      [{ content: "Vehicle(s)", styles: { fontStyle: "bold", textColor: gray } }, vehicleLabel],
-    ],
-    theme: "plain",
-    tableLineColor: [220, 220, 220],
-    tableLineWidth: 0.2,
-  });
-
-  let nextY = docPdf.lastAutoTable.finalY + 6;
-
-  // --- Vehicles Section (if selectedVehicles exist) ---
-  const vehicles = student.selectedVehicles;
-  if (vehicles?.length > 0) {
-    docPdf.setFontSize(13);
-    docPdf.setTextColor(...primary);
-    docPdf.text("Vehicle Details", margin, nextY);
-
-    docPdf.setDrawColor(200, 200, 200);
+  function ul(x, y, w) {
+    docPdf.setDrawColor(0, 0, 0);
     docPdf.setLineWidth(0.3);
-    docPdf.line(margin, nextY + 3, pageW - margin, nextY + 3);
-
-    autoTable(docPdf, {
-      startY: nextY + 6,
-      margin: { left: margin, right: margin },
-      tableWidth: contentW,
-      styles: { fontSize: 10, cellPadding: 3, textColor: dark },
-      headStyles: { fillColor: [245, 247, 250], textColor: primary, fontStyle: "bold" },
-      columns: [
-        { header: "#", dataKey: "idx" },
-        { header: "Vehicle Name", dataKey: "name" },
-        { header: "Price", dataKey: "price" },
-      ],
-      body: vehicles.map((v, i) => ({
-        idx: String(i + 1),
-        name: v.name || "—",
-        price: formatCurrency(v.price || 0),
-      })),
-      theme: "plain",
-      tableLineColor: [220, 220, 220],
-      tableLineWidth: 0.2,
-      columnStyles: {
-        0: { cellWidth: 15, halign: "center", textColor: gray },
-        1: { fontStyle: "bold" },
-        2: { halign: "right" },
-      },
-    });
-
-    nextY = docPdf.lastAutoTable.finalY + 6;
+    docPdf.line(x, y + 1, x + w, y + 1);
   }
 
-  // --- Two Wheeler Details (if not in selectedVehicles) ---
-  if (!vehicles?.length && student.twoWheelerName) {
-    docPdf.setFontSize(13);
-    docPdf.setTextColor(...primary);
-    docPdf.text("Vehicle Details", margin, nextY);
-
-    docPdf.setDrawColor(200, 200, 200);
-    docPdf.setLineWidth(0.3);
-    docPdf.line(margin, nextY + 3, pageW - margin, nextY + 3);
-
-    autoTable(docPdf, {
-      startY: nextY + 6,
-      margin: { left: margin, right: margin },
-      tableWidth: contentW,
-      styles: { fontSize: 10, cellPadding: 2.5, textColor: dark },
-      headStyles: { fillColor: [245, 247, 250], textColor: primary, fontStyle: "bold", halign: "left" },
-      columnStyles: { 0: { cellWidth: 55, fontStyle: "bold", textColor: gray } },
-      body: [
-        [{ content: "Vehicle Type", styles: { fontStyle: "bold", textColor: gray } }, student.twoWheelerType || "—"],
-        [{ content: "Vehicle Name", styles: { fontStyle: "bold", textColor: gray } }, student.twoWheelerName],
-        [{ content: "Price", styles: { fontStyle: "bold", textColor: gray } }, formatCurrency(student.twoWheelerPrice || 0)],
-      ],
-      theme: "plain",
-      tableLineColor: [220, 220, 220],
-      tableLineWidth: 0.2,
-    });
-
-    nextY = docPdf.lastAutoTable.finalY + 6;
+  function labelB(x, y, text) {
+    docPdf.setFont("helvetica", "bold");
+    docPdf.setFontSize(10);
+    docPdf.text(text, x, y);
+    return docPdf.getTextWidth(text);
   }
 
-  // --- Payment Summary ---
-  docPdf.setFontSize(13);
-  docPdf.setTextColor(...primary);
-  docPdf.text("Payment Summary", margin, nextY);
+  function valueN(x, y, text) {
+    docPdf.setFont("helvetica", "normal");
+    docPdf.setFontSize(10);
+    docPdf.text(text, x, y);
+  }
 
-  docPdf.setDrawColor(200, 200, 200);
-  docPdf.setLineWidth(0.3);
-  docPdf.line(margin, nextY + 3, pageW - margin, nextY + 3);
+  let y = 92;
 
-  const feesPaid = Number(student.feesPaid || 0);
-  const courseFees = Number(student.courseFees || student.totalFees || 0);
-  const pendingFees = Number(student.pendingFees || student.remainingFees || 0);
-  const isPaid = pendingFees <= 0;
+  const dayTime = student.batch === "Morning" ? (student.batchTime || "").replace(/\s*AM\s*/g, "").trim() : "";
+  const nightTime = student.batch === "Evening" ? (student.batchTime || "").replace(/\s*PM\s*/g, "").trim() : "";
 
-  const paymentRows = [
-    [
-      { content: "Course Fees", styles: { fontStyle: "bold", textColor: gray } },
-      formatCurrency(courseFees),
-    ],
+  const vModel = student.vehicleType || (student.selectedVehicles && student.selectedVehicles[0] ? student.selectedVehicles[0].name : "");
+
+  const maxLeft = photoX - 3;
+
+  function drawField(x, y, lbl, val, valW) {
+    const lw = labelB(x, y, lbl);
+    const sx = x + lw + 2;
+    valueN(sx, y, val || "");
+    const uw = Math.max(valW || 25, docPdf.getTextWidth(val || "") + 2);
+    ul(sx, y, uw);
+    return sx + uw;
+  }
+
+  function drawDateField(x, y, lbl, val) {
+    const lw = labelB(x, y, lbl);
+    const sx = x + lw + 2;
+    const display = val ? fmtDate(val) : "___ / ___ / ______";
+    valueN(sx, y, display);
+    const placeholderW = docPdf.getTextWidth("___ / ___ / ______") + 2;
+    const actualW = val ? docPdf.getTextWidth(fmtDate(val)) + 2 : 0;
+    const uw = Math.max(placeholderW, actualW, 28);
+    ul(sx, y, uw);
+    return sx + uw;
+  }
+
+  let cx = m;
+  cx = drawField(cx, y, "Registration No.", student.studentId || "", 30);
+  drawField(cx + 5, y, "Vehicle Model", vModel, 28);
+  y += 14;
+  cx = m;
+  drawDateField(cx, y, "Date", student.joiningDate || "");
+
+  y = 124;
+  const nameLw = labelB(m, y, "Name");
+  const nameSx = m + nameLw + 2;
+  valueN(nameSx, y, student.name || "");
+  ul(nameSx, y, maxLeft - nameSx);
+
+  y = 144;
+  cx = m;
+  cx = drawDateField(cx, y, "Date of Birth", student.dob || "");
+  cx = drawField(cx + 5, y, "Blood Group", student.bloodGroup || "", 35);
+
+  y = 162;
+  const addrLw = labelB(m, y, "Address");
+  const addrSx = m + addrLw + 2;
+  const addrText = student.permanentAddress || student.address || "";
+  const addrW = pw - m - addrSx;
+  valueN(addrSx, y, addrText);
+  ul(addrSx, y, addrW);
+
+  y = 180;
+  labelB(m, y, "Address");
+  ul(m + docPdf.getTextWidth("Address") + 2, y, pw - m - (m + docPdf.getTextWidth("Address") + 2));
+
+  y = 198;
+  cx = m;
+  cx = drawField(cx, y, "Mobile No.", student.phone || "", 35);
+  cx = drawField(cx + 5, y, "Advance", fmtMoney(student.feesPaid), 30);
+  drawField(cx + 5, y, "Balance", fmtMoney(student.pendingFees), 30);
+
+  y = 216;
+  cx = m;
+  cx = drawField(cx, y, "Class Of Training", student.course || "", 40);
+
+  const dayLw = labelB(cx + 5, y, "Time (Day)");
+  const daySx = cx + 5 + dayLw + 2;
+  valueN(daySx, y, dayTime);
+  ul(daySx, y, Math.max(20, docPdf.getTextWidth(dayTime) + 2));
+  valueN(daySx + Math.max(20, docPdf.getTextWidth(dayTime) + 2) + 2, y, "AM");
+
+  const nightLw = labelB(daySx + 35, y, "Time (Night)");
+  const nightSx = daySx + 35 + nightLw + 2;
+  valueN(nightSx, y, nightTime);
+  ul(nightSx, y, Math.max(20, docPdf.getTextWidth(nightTime) + 2));
+  valueN(nightSx + Math.max(20, docPdf.getTextWidth(nightTime) + 2) + 2, y, "PM");
+
+  y = 234;
+  cx = m;
+  cx = drawField(cx, y, "Driving License No.", student.dlNumber || "", 35);
+  drawDateField(cx + 5, y, "Validity Up To", student.dlValidTill || "");
+
+  y = 252;
+  cx = m;
+  cx = drawField(cx, y, "Learning License No.", student.llNumber || "", 35);
+  cx = drawDateField(cx + 5, y, "Issue Date", student.llValidFrom || "");
+  drawDateField(cx + 5, y, "Valid Till", student.llValidTo || "");
+
+  y = 270;
+  cx = m;
+  cx = drawDateField(cx, y, "Completion Of Course", student.courseCompletionDate || "");
+  drawDateField(cx + 5, y, "Passing Date (DL Test)", "");
+
+  docPdf.addPage();
+
+  const dFont = dev ? "NotoSansDevanagari" : "helvetica";
+
+  docPdf.setFont(dFont, "bold");
+  docPdf.setFontSize(16);
+  docPdf.text("नियम व अटी", pw / 2, 25, { align: "center" });
+
+  docPdf.setFont(dFont, "normal");
+  docPdf.setFontSize(11);
+
+  const rules = [
+    "१. एकदा भरलेली फी कोणत्याही कारणास्तव परत किंवा",
+    "    दुसऱ्याच्या नावावर केली जाणार नाही.",
+    "२. २५ दिवसांचे ट्रेनिंग ४० दिवसात पूर्ण न झाल्यास ज्यादा फी भरावी लागेल.",
+    "३. लर्निंग लायसन्स काढल्यानंतर ट्रेनिंग चालू होईल.",
+    "४. फी ची रक्कम भरल्यानंतर ट्रेनिंगसाठी वेळेवर उपस्थित राहण्याची",
+    "    जबाबदारी उमेदवारावर राहील.",
+    "५. शिकाऊ लायसन्स काढल्यावर ३० दिवसानंतर",
+    "    पक्क्या लायसन्स करीता ऑफिसमध्ये येऊन भेटणे.",
+    "६. शिकाऊ लायसन्सच्या परीक्षेसाठी वाहतुकीचे नियम व चिन्हांचा",
+    "    अभ्यास करणे आवश्यक आहे.",
+    "७. पक्क्या लायसन्सकरिता ड्रायव्हिंग परीक्षा पास झाल्यानंतर",
+    "    ड्रायव्हिंग लायसन्स एक महिन्याच्या आत पोस्टाने घरपोच येईल.",
+    "८. पक्के लायसन्स पोस्टाने घरी येत असल्याने आपण",
+    "    दिलेल्या पत्याचे पुरावे योग्य असणे आवश्यक आहे.",
+    "९. लायसन्स घरी आले नाही तर त्याची सर्व जबाबदारी",
+    "    विद्यार्थ्यांची असेल.",
   ];
 
-  if (student.discountType && student.discountType !== "" && Number(student.discountValue) > 0) {
-    const discountLabel = student.discountType === "percentage"
-      ? "Discount (" + student.discountValue + "%)"
-      : "Discount (" + formatCurrency(student.discountValue) + ")";
-    const discountAmount = student.discountType === "percentage"
-      ? Math.round(courseFees * student.discountValue / 100)
-      : Number(student.discountValue);
-    paymentRows.push([
-      { content: discountLabel, styles: { fontStyle: "bold", textColor: gray } },
-      { content: "-" + formatCurrency(discountAmount), styles: { textColor: [22, 163, 74] } },
-    ]);
+  const rtoLines = [
+    "-----------------------------------------------------------------",
+    "R.T.O. ला येत असताना सर्व ओरिजनल पेपर्स सोबत घेऊन येणे आवश्यक आहे",
+    "१. लर्निंग लायसन्स साठी :",
+    "    १. संगमब्रीज R.T.O. जुना बाजार जवळ, मंगळवार पेठ, पुणे.",
+    "    २. वेळ : दुपारी १ वाजता आल्यानंतर संध्याकाळी ५ वाजेपर्यंतचा",
+    "        वेळ काढुन यावे",
+    "२. पक्क्या लायसन्स साठी :",
+    "    १. फक्त २ व्हिलर : फुले नगर, विश्रांतवाडी, आर.टी.ओ.,",
+    "        आळंदी रोड, पुणे.",
+    "    २. २ व्हिलर व ४ व्हिलर : नाशिकफाटा, वल्लभनगर एसटी स्टैंड,",
+    "        हॉटेल कलासागर समोर, IDTR R.T.O. कासारवाडी पुणे.",
+    "        वेळ : सकाळी ७ वा. आल्यानंतर संध्या. ५ वाजेपर्यंतचा",
+    "        वेळ काढुन यावे.",
+  ];
+
+  let ry = 40;
+  docPdf.setFont(dFont, "normal");
+  docPdf.setFontSize(11);
+
+  for (const rule of rules) {
+    docPdf.text(rule, m, ry);
+    ry += 6.5;
   }
 
-  paymentRows.push(
-    [
-      { content: "Fees Paid", styles: { fontStyle: "bold", textColor: gray } },
-      formatCurrency(feesPaid),
-    ],
-    [
-      { content: "Pending Fees", styles: { fontStyle: "bold", textColor: gray } },
-      { content: formatCurrency(pendingFees), styles: { textColor: isPaid ? [22, 163, 74] : [220, 38, 38] } },
-    ],
-    [
-      { content: "Payment Status", styles: { fontStyle: "bold", textColor: gray } },
-      {
-        content: isPaid ? "PAID" : "PARTIALLY PAID",
-        styles: { fontStyle: "bold", fontSize: 11, textColor: isPaid ? [22, 163, 74] : [220, 38, 38] },
-      },
-    ],
-  );
-
-  if (student.feeNote) {
-    paymentRows.push([
-      { content: "Fee Note", styles: { fontStyle: "bold", textColor: gray } },
-      { content: student.feeNote, styles: { textColor: dark, fontSize: 9 } },
-    ]);
+  for (const line of rtoLines) {
+    docPdf.text(line, m, ry);
+    ry += 6.5;
   }
 
-  autoTable(docPdf, {
-    startY: nextY + 6,
-    margin: { left: margin, right: margin },
-    tableWidth: contentW,
-    styles: { fontSize: 10, cellPadding: 3, textColor: dark },
-    columnStyles: { 0: { cellWidth: 55, fontStyle: "bold", textColor: gray } },
-    body: paymentRows,
-    theme: "plain",
-    tableLineColor: [220, 220, 220],
-    tableLineWidth: 0.2,
-  });
+  ry += 12;
 
-  const paymentTableEnd = docPdf.lastAutoTable.finalY + 10;
-
-  // --- Footer Section ---
-  docPdf.setDrawColor(180, 180, 180);
-  docPdf.setLineWidth(0.5);
-  docPdf.line(margin, paymentTableEnd + 20, margin + 55, paymentTableEnd + 20);
+  docPdf.setFont("helvetica", "bold");
   docPdf.setFontSize(10);
-  docPdf.setTextColor(...gray);
-  docPdf.text("Owner Signature", margin, paymentTableEnd + 26);
 
-  docPdf.setFontSize(12);
-  docPdf.setTextColor(...primary);
-  docPdf.text("Thank you for choosing " + SCHOOL.name + "!", margin, paymentTableEnd + 40);
+  docPdf.text("Candidate Signature", m, ry);
+  docPdf.setDrawColor(0, 0, 0);
+  docPdf.setLineWidth(0.3);
+  docPdf.line(m, ry + 2, m + 55, ry + 2);
 
-  docPdf.setFontSize(9);
-  docPdf.setTextColor(...gray);
-  docPdf.text("For any queries, please contact us at " + SCHOOL.phone + " or " + SCHOOL.email, margin, paymentTableEnd + 46);
+  docPdf.text("Owner Signature", pw - m - 55, ry);
+  docPdf.line(pw - m - 55, ry + 2, pw - m, ry + 2);
 
-  docPdf.setFontSize(8);
-  docPdf.setTextColor(160, 160, 160);
-  docPdf.text("This is a computer-generated invoice.", margin, 285);
-  docPdf.text("Invoice No: " + invoiceNo + "  |  Date: " + formatDate(), margin, 290);
-
-  const filename = "Invoice_" + invoiceNo + "_" + (student.name || "Student").replace(/\s+/g, "_") + ".pdf";
+  const filename = (student.name || "Student").replace(/\s+/g, "_") + "_Form14.pdf";
   docPdf.save(filename);
 }

@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { signOut } from "firebase/auth";
 import { useNavigate } from "react-router-dom";
-import { doc, getDoc, collection, query, where } from "firebase/firestore";
+import { doc, getDoc, getDocs, collection, query, where } from "firebase/firestore";
 import { auth, db } from "../firebase";
 import { useAuth } from "../context/AuthContext";
 import { useNotification } from "../context/NotificationContext";
@@ -54,12 +54,11 @@ export default function TeacherDashboard() {
 
   useEffect(() => {
     const loadAttendance = async () => {
-      if (!teacherData?.branchId || !students.length) return;
+      if (!students.length) return;
       try {
         const q = query(
           collection(db, "attendance"),
-          where("date", "==", selectedDate),
-          where("branchId", "==", teacherData.branchId)
+          where("date", "==", selectedDate)
         );
         const snap = await getDocs(q);
         const map = {};
@@ -237,7 +236,7 @@ export default function TeacherDashboard() {
                                 <td className="td-name">{s.name}</td>
                                 <td className="td-phone">{s.phone}</td>
                                 <td><span className="badge badge-course td-course" title={s.course}>{s.course}</span></td>
-<td className="td-attendance">{tProgress}/{getCourseTotalClasses(s.courseId)}</td>
+<td className="td-attendance">{tProgress}/{getCourseTotalClasses(s.course)}</td>
                                 <td className="td-fees">
                                   <span style={{ color: pending > 0 ? "#DC2626" : "#059669", fontWeight: 600 }}>
                                     ₹{pending.toLocaleString()}
@@ -265,7 +264,7 @@ export default function TeacherDashboard() {
                           <div className="data-card-row"><span className="data-card-label"><User size={14} /></span><span className="data-card-value">{s.name}</span></div>
                           <div className="data-card-row"><span className="data-card-label"><Phone size={14} /></span><span className="data-card-value">{s.phone}</span></div>
                           <div className="data-card-row"><span className="data-card-label"><BookOpen size={14} /></span><span className="data-card-value">{s.course}</span></div>
-                          <div className="data-card-row"><span className="data-card-label"><ClipboardList size={14} /></span><span className="data-card-value">{tProgress}/{getCourseTotalClasses(s.courseId)} days</span></div>
+                          <div className="data-card-row"><span className="data-card-label"><ClipboardList size={14} /></span><span className="data-card-value">{tProgress}/{getCourseTotalClasses(s.course)} days</span></div>
                           <div className="data-card-row"><span className="data-card-label"><Wallet size={14} /> Pending Fees</span><span style={{ color: pending > 0 ? "#DC2626" : "#059669", fontWeight: 600 }}>₹{pending.toLocaleString()}</span></div>
                           <div className="data-card-row"><span className="data-card-label">Status</span><span className={`badge ${tStatus === "active" ? "badge-success" : tStatus === "completed" ? "badge-success" : tStatus === "expired" ? "badge-danger" : "badge-warning"}`}>{tStatus === "not_started" ? "Not Started" : tStatus === "active" ? "Active" : tStatus === "completed" ? "Completed" : "Expired"}</span></div>
                         </div>
@@ -318,7 +317,7 @@ export default function TeacherDashboard() {
                         <tr key={s.id}>
                           <td className="td-name">{s.name}</td>
                           <td><span className="badge badge-course td-course" title={s.course}>{s.course}</span></td>
-                          <td className="td-attendance">{tProgress}/{getCourseTotalClasses(s.courseId)}</td>
+                          <td className="td-attendance">{tProgress}/{getCourseTotalClasses(s.course)}</td>
                           <td className="td-status">
                             {tStatus === "not_started" ? (
                               <span className="badge badge-warning">Not Started</span>

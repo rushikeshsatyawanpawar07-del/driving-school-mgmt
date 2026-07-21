@@ -655,7 +655,7 @@ function ExtraCarList({ extras, svPrice, onAdd, onRemove, onPriceChange }) {
           value={input} onChange={(e) => setInput(e.target.value)}
           style={{ width: 200, padding: "4px 8px", fontSize: 13 }}
         />
-        <button className="btn btn-sm btn-primary" style={{ padding: "4px 12px", fontSize: 12 }}
+        <button type="button" className="btn btn-sm btn-primary" style={{ padding: "4px 12px", fontSize: 12 }}
           onClick={() => {
             if (!input.trim()) return;
             onAdd(input.trim(), svPrice);
@@ -671,7 +671,7 @@ function ExtraCarList({ extras, svPrice, onAdd, onRemove, onPriceChange }) {
             onChange={(e) => onPriceChange(extra.id, Math.max(0, Number(e.target.value) || 0))}
             style={{ width: 80, padding: "2px 6px", border: "1px solid var(--gray-300)", borderRadius: 4, fontSize: 12 }}
           />
-          <button className="btn btn-sm btn-secondary" style={{ padding: "2px 6px", fontSize: 11, lineHeight: "1.2" }}
+          <button type="button" className="btn btn-sm btn-secondary" style={{ padding: "2px 6px", fontSize: 11, lineHeight: "1.2" }}
             onClick={() => onRemove(extra.id)}
           >✕</button>
         </div>
@@ -696,7 +696,7 @@ function CustomCarSection({ onAdd, onRemove, onPriceChange, customVehicles }) {
           onChange={(e) => setPrice(Math.max(0, Number(e.target.value) || 0))}
           style={{ width: 100, padding: "4px 8px", fontSize: 13 }}
         />
-        <button className="btn btn-sm btn-primary" style={{ padding: "4px 12px", fontSize: 12 }}
+        <button type="button" className="btn btn-sm btn-primary" style={{ padding: "4px 12px", fontSize: 12 }}
           onClick={() => {
             if (!name.trim()) return;
             onAdd(name.trim(), price || 0);
@@ -713,7 +713,7 @@ function CustomCarSection({ onAdd, onRemove, onPriceChange, customVehicles }) {
             onChange={(e) => onPriceChange(cc.id, Math.max(0, Number(e.target.value) || 0))}
             style={{ width: 80, padding: "2px 6px", border: "1px solid var(--gray-300)", borderRadius: 4, fontSize: 12 }}
           />
-          <button className="btn btn-sm btn-secondary" style={{ padding: "2px 6px", fontSize: 11, lineHeight: "1.2" }}
+          <button type="button" className="btn btn-sm btn-secondary" style={{ padding: "2px 6px", fontSize: 11, lineHeight: "1.2" }}
             onClick={() => onRemove(cc.id)}
           >✕</button>
         </div>

@@ -41,10 +41,6 @@ service cloud.firestore {
       return exists(path) ? get(path).data.branchId : null;
     }
 
-    function isReceptionistForBranch(resourceBranchId) {
-      return isReceptionist() && resourceBranchId == getReceptionistBranch(request.auth.uid);
-    }
-
     function isReceptionistOrAuth() {
       return isReceptionist();
     }
@@ -94,9 +90,9 @@ service cloud.firestore {
 
     // ── attendance ──
     match /attendance/{docId} {
-      allow read: if isOwner() || (isTeacher() && isTeacherForBranch(resource.data.branchId)) || (isClient() && resource.data.clientAuthUid == request.auth.uid);
-      allow create: if isOwner() || (isTeacher() && request.resource.data.branchId == getTeacherBranch(request.auth.uid));
-      allow update: if isOwner() || (isTeacher() && isTeacherForBranch(resource.data.branchId));
+      allow read: if isOwner() || isTeacher() || (isClient() && resource.data.clientAuthUid == request.auth.uid);
+      allow create: if isOwner() || isTeacher();
+      allow update: if isOwner() || isTeacher();
       allow delete: if isOwner();
     }
 
@@ -106,11 +102,7 @@ service cloud.firestore {
       allow create, update, delete: if isOwner();
     }
 
-    // ── courses ──
-    match /courses/{courseId} {
-      allow read: if isAuth();
-      allow create, update, delete: if isOwner();
-    }
+
 
     // ── receptionists ──
     match /receptionists/{uid} {
