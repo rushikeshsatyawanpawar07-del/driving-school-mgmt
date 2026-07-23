@@ -44,12 +44,16 @@ export async function getInquiry(id) {
   return snap.exists() ? { id: snap.id, ...snap.data() } : null;
 }
 
-export async function searchInquiriesByName(name, branchId) {
-  if (!name || !branchId) return [];
-  const q = query(
-    collection(db, INQUIRIES),
-    where("branchId", "==", branchId)
-  );
+export async function searchInquiriesByName(name, branchId, allBranches = false) {
+  if (!name) return [];
+  let q;
+  if (allBranches) {
+    q = query(collection(db, INQUIRIES));
+  } else if (branchId) {
+    q = query(collection(db, INQUIRIES), where("branchId", "==", branchId));
+  } else {
+    return [];
+  }
   const snap = await getDocs(q);
   const inquiries = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
   const search = name.toLowerCase().trim();

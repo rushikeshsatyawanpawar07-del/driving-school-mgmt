@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState, useRef } from "react";
-import { onAuthStateChanged } from "firebase/auth";
+import { onAuthStateChanged, signOut } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
 import { auth, db } from "../firebase";
 
@@ -20,6 +20,26 @@ export function AuthProvider({ children }) {
           const userDoc = await getDoc(doc(db, "user", firebaseUser.uid));
           const exists = userDoc.exists();
           const role = exists ? userDoc.data().role : null;
+          if (role === "teacher") {
+            const tSnap = await getDoc(doc(db, "teachers", firebaseUser.uid));
+            if (tSnap.exists() && tSnap.data().status === "inactive") {
+              await signOut(auth);
+              setUser(null);
+              setUserRole(null);
+              setLoading(false);
+              return;
+            }
+          }
+          if (role === "reception") {
+            const rSnap = await getDoc(doc(db, "receptionists", firebaseUser.uid));
+            if (rSnap.exists() && rSnap.data().status === "inactive") {
+              await signOut(auth);
+              setUser(null);
+              setUserRole(null);
+              setLoading(false);
+              return;
+            }
+          }
           setUser({ ...firebaseUser, name: exists ? (userDoc.data().name || "User") : "User" });
           setUserRole(role);
         } catch (err) {

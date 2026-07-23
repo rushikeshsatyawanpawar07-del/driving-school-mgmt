@@ -16,11 +16,12 @@ import {
   getTeachers,
 } from "../services/teacherService";
 import { generateInvoicePDF } from "../services/invoiceService";
+import { getSchedulesByDate, saveSchedules } from "../services/scheduleService";
 import {
   LayoutDashboard, Car, User, Wallet, Building2, ClipboardList, Phone, Calendar, BookOpen,
   Eye, Pencil, Trash2, Bell, TriangleAlert, BadgeAlert, CheckCircle, Link2, GraduationCap,
   Users, Mail, CreditCard, Copy, Fingerprint, Sunrise, Sun, Sunset, Bike, CircleOff, Clock, Gauge,
-  Menu, X,
+  Menu, X, CalendarCheck,
 } from "lucide-react";
 import StudentForm from "./StudentForm";
 import LicenseReminderSection from "./LicenseReminderSection";
@@ -43,6 +44,7 @@ export default function ReceptionDashboard() {
   const [savingInquiry, setSavingInquiry] = useState(false);
   const [deleting, setDeleting] = useState(null);
   const [inquirySearch, setInquirySearch] = useState("");
+  const [searchAllBranches, setSearchAllBranches] = useState(false);
   const [followUpsDue, setFollowUpsDue] = useState([]);
   const [inquiryForm, setInquiryForm] = useState({
     name: "", phone: "", email: "", courseInterested: "", inquiryDate: new Date().toISOString().split("T")[0], notes: "",
@@ -69,6 +71,26 @@ export default function ReceptionDashboard() {
   const [teachers, setTeachers] = useState([]);
   const [assignSearch, setAssignSearch] = useState("");
   const [assignTeacherFilter, setAssignTeacherFilter] = useState("");
+
+  // Schedule state
+  const [scheduleDate, setScheduleDate] = useState(() => {
+    const d = new Date(); d.setDate(d.getDate() + 1);
+    return d.toISOString().split("T")[0];
+  });
+  const [scheduleData, setScheduleData] = useState({});
+  const [scheduleLoading, setScheduleLoading] = useState(false);
+  const [scheduleSaving, setScheduleSaving] = useState(false);
+  const SCHEDULE_TIME_SLOTS = [
+    "06:00 AM – 06:30 AM","06:30 AM – 07:00 AM","07:00 AM – 07:30 AM",
+    "07:30 AM – 08:00 AM","08:00 AM – 08:30 AM","08:30 AM – 09:00 AM",
+    "09:00 AM – 09:30 AM","09:30 AM – 10:00 AM","10:00 AM – 10:30 AM",
+    "10:30 AM – 11:00 AM","11:00 AM – 11:30 AM","11:30 AM – 12:00 PM",
+    "12:00 PM – 12:30 PM","12:30 PM – 01:00 PM",
+    "04:00 PM – 04:30 PM","04:30 PM – 05:00 PM","05:00 PM – 05:30 PM",
+    "05:30 PM – 06:00 PM","06:00 PM – 06:30 PM","06:30 PM – 07:00 PM",
+    "07:00 PM – 07:30 PM","07:30 PM – 08:00 PM","08:00 PM – 08:30 PM",
+    "08:30 PM – 09:00 PM","09:00 PM – 09:30 PM",
+  ];
 
   const courseOptions = SCHOOL.courses;
   const filteredInquiryCourses = useMemo(
@@ -98,7 +120,7 @@ export default function ReceptionDashboard() {
   const loadInquiries = async () => {
     setInquiriesLoading(true);
     try {
-      const data = await getInquiries(branchId);
+      const data = await getInquiries(searchAllBranches ? null : branchId);
       setInquiries(data);
     } catch { addNotification("Failed to load inquiries", "error"); }
     setInquiriesLoading(false);
@@ -108,7 +130,7 @@ export default function ReceptionDashboard() {
     if (["inquiries", "addInquiry", "viewInquiry", "dashboard"].includes(view)) {
       loadInquiries();
     }
-  }, [view, branchId]);
+  }, [view, branchId, searchAllBranches]);
 
   const filteredInquiries = inquiries.filter((inq) => {
     const search = inquirySearch.toLowerCase();
@@ -243,7 +265,49 @@ export default function ReceptionDashboard() {
       if (view === "assign") loadStudents();
       loadTeachers();
     }
+    if (view === "schedule") {
+      loadStudents();
+      loadSchedule();
+    }
   }, [view, branchId]);
+
+  const loadSchedule = async () => {
+    if (!branchId) return;
+    setScheduleLoading(true);
+    try {
+      const existing = await getSchedulesByDate(branchId, scheduleDate);
+      const map = {};
+      existing.forEach((s) => { map[s.studentId] = { time: s.time || "", session: s.session || "" }; });
+      setScheduleData(map);
+    } catch { addNotification("Failed to load schedules", "error"); }
+    setScheduleLoading(false);
+  };
+
+  useEffect(() => {
+    if (view === "schedule") loadSchedule();
+  }, [scheduleDate]);
+
+  const handleScheduleChange = (studentId, field, value) => {
+    setScheduleData((prev) => ({
+      ...prev,
+      [studentId]: { ...prev[studentId], [field]: value },
+    }));
+  };
+
+  const handleSaveSchedule = async () => {
+    setScheduleSaving(true);
+    try {
+      const entries = students.map((s) => ({
+        studentId: s.id,
+        studentName: s.name,
+        time: scheduleData[s.id]?.time || "",
+        session: scheduleData[s.id]?.session || "",
+      }));
+      await saveSchedules(entries, branchId, scheduleDate);
+      addNotification("Schedule saved");
+    } catch { addNotification("Failed to save schedule", "error"); }
+    setScheduleSaving(false);
+  };
 
   const handleAssignTeacher = async (studentId, teacherId) => {
     try {
@@ -269,22 +333,25 @@ export default function ReceptionDashboard() {
   const handleSaveStudent = async (payload) => {
     setSaving(true);
     try {
+      let studentId;
       if (editingStudent) {
         await updateStudent(editingStudent.id, payload);
+        studentId = editingStudent.id;
         addNotification("Student updated");
       } else {
         const inquiryId = payload.matchedInquiryId;
         delete payload.matchedInquiryId;
         const saved = await addStudent(payload);
+        studentId = saved.id;
         if (inquiryId) {
           await deleteInquiry(inquiryId).catch(() => {});
         }
-        try {
-          const latest = await getStudent(saved.id);
-          if (latest) await generateInvoicePDF(latest, teachers, profile?.branchId ? (branches.find((b) => b.id === profile.branchId)?.name) : undefined);
-        } catch { addNotification("Invoice download failed, student was saved", "error"); }
         addNotification("Student added");
       }
+      try {
+        const latest = await getStudent(studentId);
+        if (latest) await generateInvoicePDF(latest, teachers, profile?.branchId ? (branches.find((b) => b.id === profile.branchId)?.name) : undefined);
+      } catch { addNotification("Invoice download failed, student was saved", "error"); }
       setEditingStudent(null);
       setView("students");
       loadStudents();
@@ -343,6 +410,7 @@ export default function ReceptionDashboard() {
     { key: "students", label: "Students", icon: Users },
     { key: "inquiries", label: "Inquiries", icon: ClipboardList },
     { key: "assign", label: "Assign Student", icon: Link2 },
+    { key: "schedule", label: "Schedule", icon: CalendarCheck },
   ];
 
   return (
@@ -359,7 +427,7 @@ export default function ReceptionDashboard() {
           {navItems.map((item) => (
             <button
               key={item.key}
-              className={`sidebar-link ${item.key === "dashboard" && view === "dashboard" ? "active" : ""} ${item.key === "students" && (view === "students" || view === "addStudent" || view === "viewStudent") ? "active" : ""} ${item.key === "inquiries" && (view === "inquiries" || view === "addInquiry" || view === "viewInquiry") ? "active" : ""} ${item.key === "assign" && view === "assign" ? "active" : ""}`}
+              className={`sidebar-link ${item.key === "dashboard" && view === "dashboard" ? "active" : ""} ${item.key === "students" && (view === "students" || view === "addStudent" || view === "viewStudent") ? "active" : ""} ${item.key === "inquiries" && (view === "inquiries" || view === "addInquiry" || view === "viewInquiry") ? "active" : ""} ${item.key === "assign" && view === "assign" ? "active" : ""} ${item.key === "schedule" && view === "schedule" ? "active" : ""}`}
               onClick={() => setView(item.key)}
             >
               <item.icon size={18} />
@@ -393,6 +461,7 @@ export default function ReceptionDashboard() {
             {view === "addInquiry" && (selectedInquiry ? "Edit Inquiry" : "Add Inquiry")}
             {view === "viewInquiry" && "Inquiry Details"}
             {view === "assign" && "Assign Student to Teacher"}
+            {view === "schedule" && "Schedule"}
           </h1>
           <div className="topbar-right">
             <span className="user-badge" style={{ background: "var(--primary)", color: "#fff" }}>Reception</span>
@@ -626,6 +695,7 @@ export default function ReceptionDashboard() {
             <StudentForm
               initialData={editingStudent}
               branchId={branchId}
+              branches={branches}
               teachers={teachers}
               onSave={handleSaveStudent}
               onCancel={() => { setEditingStudent(null); setView("students"); }}
@@ -742,6 +812,14 @@ export default function ReceptionDashboard() {
 
               <div className="search-bar">
                 <input type="text" placeholder="Search by name or phone..." value={inquirySearch} onChange={(e) => setInquirySearch(e.target.value)} />
+                <button
+                  className={`btn btn-sm ${searchAllBranches ? "btn-primary" : "btn-secondary"}`}
+                  onClick={() => setSearchAllBranches((v) => !v)}
+                  style={{ whiteSpace: "nowrap" }}
+                >
+                  <Building2 size={14} style={{ marginRight: 4, verticalAlign: "middle" }} />
+                  {searchAllBranches ? "All Branches" : "This Branch"}
+                </button>
               </div>
 
               {inquiriesLoading ? (
@@ -757,6 +835,7 @@ export default function ReceptionDashboard() {
                           <tr>
                             <th>Name</th>
                             <th>Phone</th>
+                            {searchAllBranches && <th>Branch</th>}
                             <th>Course</th>
                             <th>Inquiry Date</th>
                             <th>Follow-up</th>
@@ -770,6 +849,11 @@ export default function ReceptionDashboard() {
                             <tr key={inq.id} className={due ? "row-followup-due" : ""}>
                               <td className="td-name">{inq.name}</td>
                               <td>{inq.phone}</td>
+                              {searchAllBranches && (
+                                <td><span className="inquiry-badge" style={{ background: "#E0E7FF", color: "#4338CA" }}>
+                                  {branches.find((b) => b.id === inq.branchId)?.name || "—"}
+                                </span></td>
+                              )}
                               <td><span className="badge badge-course">{inq.courseInterested || "—"}</span></td>
                               <td>{inq.inquiryDate}</td>
                               <td>
@@ -809,6 +893,9 @@ export default function ReceptionDashboard() {
                         <div key={inq.id} className="data-card" style={due ? { borderLeft: "4px solid #d97706" } : {}}>
                           <div className="data-card-row"><span className="data-card-label"><User size={14} /></span><span className="data-card-value">{inq.name}</span></div>
                           <div className="data-card-row"><span className="data-card-label"><Phone size={14} /></span><span className="data-card-value">{inq.phone}</span></div>
+                          {searchAllBranches && (
+                            <div className="data-card-row"><span className="data-card-label"><Building2 size={14} /></span><span className="data-card-value"><span className="inquiry-badge" style={{ background: "#E0E7FF", color: "#4338CA" }}>{branches.find((b) => b.id === inq.branchId)?.name || "—"}</span></span></div>
+                          )}
                           <div className="data-card-row"><span className="data-card-label"><BookOpen size={14} /></span><span className="data-card-value">{inq.courseInterested || "—"}</span></div>
                           <div className="data-card-row"><span className="data-card-label"><Calendar size={14} /></span><span className="data-card-value">{inq.inquiryDate}</span></div>
                           <div className="data-card-row">
@@ -1070,6 +1157,143 @@ export default function ReceptionDashboard() {
                   </div>
                 );
               })()}
+            </div>
+          )}
+
+          {view === "schedule" && (
+            <div className="card">
+              <h2><CalendarCheck size={20} style={{ verticalAlign: "middle", marginRight: 8 }} />Schedule Classes</h2>
+              <p style={{ marginBottom: 16, color: "var(--gray-500)" }}>Set time and session for each student.</p>
+
+              <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20, flexWrap: "wrap" }}>
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <label style={{ fontSize: 13 }}>Date</label>
+                  <input
+                    type="date"
+                    className="form-input"
+                    value={scheduleDate}
+                    onChange={(e) => setScheduleDate(e.target.value)}
+                    style={{ width: 180 }}
+                  />
+                </div>
+                <button
+                  className="btn btn-primary"
+                  onClick={handleSaveSchedule}
+                  disabled={scheduleSaving}
+                  style={{ marginTop: 18 }}
+                >
+                  {scheduleSaving ? "Saving..." : "Save All"}
+                </button>
+              </div>
+
+              {scheduleLoading ? (
+                <div className="table-loader"><div className="spinner" /></div>
+              ) : students.length === 0 ? (
+                <div className="empty-state">No students in this branch.</div>
+              ) : (
+                <div className="responsive-table-container">
+                  <div className="desktop-table">
+                    <div className="table-wrapper">
+                      <table className="data-table">
+                        <thead>
+                          <tr>
+                            <th>Student Name</th>
+                            <th>Course</th>
+                            <th>Time</th>
+                            <th>Session</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {students.map((s) => (
+                            <tr key={s.id}>
+                              <td className="td-name">{s.name}</td>
+                              <td><span className="badge badge-course">{s.course}</span></td>
+                              <td style={{ minWidth: 200 }}>
+                                <div style={{ display: "flex", gap: 0 }}>
+                                  <select
+                                    className="form-input"
+                                    value={scheduleData[s.id]?.time || ""}
+                                    onChange={(e) => handleScheduleChange(s.id, "time", e.target.value)}
+                                    style={{ borderTopRightRadius: 0, borderBottomRightRadius: 0, fontSize: 13, padding: "6px 8px" }}
+                                  >
+                                    <option value="">Select...</option>
+                                    {SCHEDULE_TIME_SLOTS.map((slot) => (
+                                      <option key={slot} value={slot}>{slot}</option>
+                                    ))}
+                                  </select>
+                                  <input
+                                    className="form-input"
+                                    placeholder="Or type..."
+                                    value={scheduleData[s.id]?.time || ""}
+                                    onChange={(e) => handleScheduleChange(s.id, "time", e.target.value)}
+                                    style={{ borderTopLeftRadius: 0, borderBottomLeftRadius: 0, borderLeft: "none", fontSize: 13, padding: "6px 8px", minWidth: 80 }}
+                                  />
+                                </div>
+                              </td>
+                              <td>
+                                <input
+                                  className="form-input"
+                                  placeholder="e.g. Session 5"
+                                  value={scheduleData[s.id]?.session || ""}
+                                  onChange={(e) => handleScheduleChange(s.id, "session", e.target.value)}
+                                  style={{ fontSize: 13, padding: "6px 8px", minWidth: 120 }}
+                                />
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                  <div className="mobile-cards">
+                    {students.map((s) => (
+                      <div key={s.id} className="data-card">
+                        <div className="data-card-row"><span className="data-card-label"><User size={14} /></span><span className="data-card-value">{s.name}</span></div>
+                        <div className="data-card-row"><span className="data-card-label"><BookOpen size={14} /></span><span className="data-card-value">{s.course}</span></div>
+                        <div className="data-card-row" style={{ flexDirection: "column", alignItems: "stretch", gap: 6 }}>
+                          <span className="data-card-label">Time</span>
+                          <select
+                            className="form-input"
+                            value={scheduleData[s.id]?.time || ""}
+                            onChange={(e) => handleScheduleChange(s.id, "time", e.target.value)}
+                            style={{ fontSize: 14 }}
+                          >
+                            <option value="">Select...</option>
+                            {SCHEDULE_TIME_SLOTS.map((slot) => (
+                              <option key={slot} value={slot}>{slot}</option>
+                            ))}
+                          </select>
+                          <input
+                            className="form-input"
+                            placeholder="Or type custom time..."
+                            value={scheduleData[s.id]?.time || ""}
+                            onChange={(e) => handleScheduleChange(s.id, "time", e.target.value)}
+                            style={{ fontSize: 14 }}
+                          />
+                        </div>
+                        <div className="data-card-row" style={{ flexDirection: "column", alignItems: "stretch", gap: 6 }}>
+                          <span className="data-card-label">Session</span>
+                          <input
+                            className="form-input"
+                            placeholder="e.g. Session 5"
+                            value={scheduleData[s.id]?.session || ""}
+                            onChange={(e) => handleScheduleChange(s.id, "session", e.target.value)}
+                            style={{ fontSize: 14 }}
+                          />
+                        </div>
+                      </div>
+                    ))}
+                    <button
+                      className="btn btn-primary"
+                      onClick={handleSaveSchedule}
+                      disabled={scheduleSaving}
+                      style={{ width: "100%", marginTop: 12 }}
+                    >
+                      {scheduleSaving ? "Saving..." : "Save All"}
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </main>

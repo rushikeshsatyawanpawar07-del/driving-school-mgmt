@@ -20,7 +20,7 @@ export function computeStatus(student) {
   const progress = Number(student.trainingProgress) || 0;
   const maxDate = student.maximumValidDate;
   const today = new Date().toISOString().split("T")[0];
-  const totalClasses = getCourseTotalClasses(student.course);
+  const totalClasses = getCourseTotalClasses(student.course, student.totalClasses);
 
   if (!student.trainingStartDate) return "not_started";
   if (progress >= totalClasses) return "completed";
@@ -47,7 +47,7 @@ export async function markAttendance(studentId, date, present, branchId) {
 
   if (!student.trainingStartDate) throw new Error("Training has not started yet.");
 
-  const totalClasses = getCourseTotalClasses(student.course);
+  const totalClasses = getCourseTotalClasses(student.course, student.totalClasses);
   const status = computeStatus(student);
   if (status === "completed") throw new Error("Course already completed.");
   if (status === "expired") throw new Error("Training validity expired. Penalty required.");

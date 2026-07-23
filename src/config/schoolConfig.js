@@ -34,7 +34,8 @@ SCHOOL.courses.forEach((c) => { COURSE_TOTAL_CLASSES[c.id] = parseInt(c.totalCla
 const TRAINING_DAYS = 25;
 const VALIDITY_DAYS = 40;
 
-export function getCourseTotalClasses(courseId) {
+export function getCourseTotalClasses(courseId, override) {
+  if (override) return Number(override);
   return COURSE_TOTAL_CLASSES[courseId] || TRAINING_DAYS;
 }
 

@@ -118,7 +118,7 @@ export async function checkCourseCompletion(studentId) {
   const snap = await getDoc(doc(db, "students", studentId));
   if (!snap.exists()) return;
   const s = { id: snap.id, ...snap.data() };
-  const totalClasses = getCourseTotalClasses(s.course);
+  const totalClasses = getCourseTotalClasses(s.course, s.totalClasses);
   if (s.trainingProgress == null || Number(s.trainingProgress) < totalClasses) return;
 
   const existing = await getDocs(query(

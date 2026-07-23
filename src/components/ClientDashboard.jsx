@@ -6,7 +6,8 @@ import { auth, db } from "../firebase";
 import { useAuth } from "../context/AuthContext";
 import { getStudentByAuthUid } from "../services/studentService";
 import { addComplaint } from "../services/complaintService";
-import { Car, LayoutDashboard, Calendar, ClipboardList, Wallet, BadgeAlert, CreditCard, GraduationCap, Phone, ChevronLeft, ChevronRight, MessageCircle } from "lucide-react";
+import { getSchedulesForStudent } from "../services/scheduleService";
+import { Car, LayoutDashboard, Calendar, ClipboardList, Wallet, BadgeAlert, CreditCard, GraduationCap, Phone, ChevronLeft, ChevronRight, MessageCircle, Clock, CalendarCheck } from "lucide-react";
 import { SCHOOL, TRAINING_DAYS, getCourseTotalClasses } from "../config/schoolConfig";
 import { computeStatus } from "../services/attendanceService";
 
@@ -25,6 +26,7 @@ export default function ClientDashboard() {
   const [view, setView] = useState("dashboard");
   const [complaintForm, setComplaintForm] = useState({ targetType: "Teacher", targetName: "", message: "" });
   const [complaintSent, setComplaintSent] = useState(false);
+  const [tomorrowSchedule, setTomorrowSchedule] = useState(null);
 
   useEffect(() => {
     const load = async () => {
@@ -32,6 +34,15 @@ export default function ClientDashboard() {
       try {
         const mine = await getStudentByAuthUid(user?.uid);
         setStudent(mine);
+        if (mine) {
+          const tomorrow = new Date();
+          tomorrow.setDate(tomorrow.getDate() + 1);
+          const tomorrowStr = tomorrow.toISOString().split("T")[0];
+          try {
+            const sched = await getSchedulesForStudent(mine.id, tomorrowStr);
+            setTomorrowSchedule(sched);
+          } catch { /* no schedule */ }
+        }
         if (user?.uid) {
           const snap = await getDocs(query(
             collection(db, "attendance"),
@@ -73,7 +84,7 @@ export default function ClientDashboard() {
     return () => clearTimeout(timer);
   }, []);
 
-  const totalClasses = getCourseTotalClasses(student?.courseId);
+  const totalClasses = getCourseTotalClasses(student?.course, student?.totalClasses);
   const attendancePct = Math.min(100, Math.round(((student?.trainingProgress || 0) / totalClasses) * 100));
   const totalFees = student?.totalFees || student?.courseFees || 0;
   const feesPaid = student?.feesPaid || 0;
@@ -211,6 +222,35 @@ export default function ClientDashboard() {
                   </div>
                 </div>
               </div>
+
+              {tomorrowSchedule && (tomorrowSchedule.time || tomorrowSchedule.session) && (
+                <div className="card" style={{ background: "linear-gradient(135deg, #059669, #10B981)", color: "#fff" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
+                    <CalendarCheck size={22} />
+                    <h3 style={{ margin: 0, color: "#fff" }}>Tomorrow's Class</h3>
+                  </div>
+                  <div style={{ display: "flex", gap: 24, flexWrap: "wrap" }}>
+                    {tomorrowSchedule.time && (
+                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        <Clock size={18} style={{ opacity: 0.8 }} />
+                        <div>
+                          <div style={{ fontSize: 12, opacity: 0.75 }}>Time</div>
+                          <div style={{ fontSize: 18, fontWeight: 700 }}>{tomorrowSchedule.time}</div>
+                        </div>
+                      </div>
+                    )}
+                    {tomorrowSchedule.session && (
+                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        <ClipboardList size={18} style={{ opacity: 0.8 }} />
+                        <div>
+                          <div style={{ fontSize: 12, opacity: 0.75 }}>Session</div>
+                          <div style={{ fontSize: 18, fontWeight: 700 }}>{tomorrowSchedule.session}</div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
 
               <div className="stats-grid">
                 <div className="stat-card">

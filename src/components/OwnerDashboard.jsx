@@ -25,11 +25,25 @@ import {
 } from "../services/inquiryService";
 import LicenseReminderSection from "./LicenseReminderSection";
 import ConfirmModal from "./ConfirmModal";
+
+const MORNING_SLOTS = [
+  "06:00 AM – 06:30 AM","06:30 AM – 07:00 AM","07:00 AM – 07:30 AM",
+  "07:30 AM – 08:00 AM","08:00 AM – 08:30 AM","08:30 AM – 09:00 AM",
+  "09:00 AM – 09:30 AM","09:30 AM – 10:00 AM","10:00 AM – 10:30 AM",
+  "10:30 AM – 11:00 AM","11:00 AM – 11:30 AM","11:30 AM – 12:00 PM",
+  "12:00 PM – 12:30 PM","12:30 PM – 01:00 PM",
+];
+const EVENING_SLOTS = [
+  "04:00 PM – 04:30 PM","04:30 PM – 05:00 PM","05:00 PM – 05:30 PM",
+  "05:30 PM – 06:00 PM","06:00 PM – 06:30 PM","06:30 PM – 07:00 PM",
+  "07:00 PM – 07:30 PM","07:30 PM – 08:00 PM","08:00 PM – 08:30 PM",
+  "08:30 PM – 09:00 PM","09:00 PM – 09:30 PM",
+];
 import {
   LayoutDashboard, Users, GraduationCap, Link2, ClipboardList, Car, Wallet, BadgeAlert,
   CheckCircle, Bell, Calendar, TriangleAlert, Phone, Eye, Pencil, Trash2, User,
   Mail, BookOpen, CreditCard, Star, Sunrise, Sun, Sunset, Bike, CircleOff,
-  Copy, Fingerprint, Clock, Gauge, Search, MessageCircle
+  Copy, Fingerprint, Clock, Gauge, Search, MessageCircle, Building2, Plus
 } from "lucide-react";
 
 export default function OwnerDashboard() {
@@ -66,6 +80,8 @@ export default function OwnerDashboard() {
   const [courseSearch, setCourseSearch] = useState("");
   const [showCourseDropdown, setShowCourseDropdown] = useState(false);
   const [selectedCourse, setSelectedCourse] = useState(null);
+  const [showAddCourse, setShowAddCourse] = useState(false);
+  const [newCourseName, setNewCourseName] = useState("");
   const courseDropdownRef = useRef(null);
   const courseOptions = SCHOOL.courses;
   const filteredCourses = useMemo(
@@ -76,6 +92,7 @@ export default function OwnerDashboard() {
   const [matchedInquiryId, setMatchedInquiryId] = useState(null);
   const [inquiryResults, setInquiryResults] = useState([]);
   const [showInquiryDropdown, setShowInquiryDropdown] = useState(false);
+  const [searchAllBranches, setSearchAllBranches] = useState(true);
   const inquiryTimerRef = useRef(null);
   const inquiryDropdownRef = useRef(null);
 
@@ -211,12 +228,12 @@ export default function OwnerDashboard() {
     setForm((prev) => ({ ...prev, name: val }));
     if (selectedStudent) { setMatchedInquiryId(null); return; }
     clearTimeout(inquiryTimerRef.current);
-    if (!val.trim() || !selectedBranch?.id) {
+    if (!val.trim()) {
       setInquiryResults([]); setShowInquiryDropdown(false); setMatchedInquiryId(null);
       return;
     }
     inquiryTimerRef.current = setTimeout(async () => {
-      const results = await searchInquiriesByName(val, selectedBranch.id);
+      const results = await searchInquiriesByName(val, selectedBranch?.id, searchAllBranches);
       setInquiryResults(results);
       setShowInquiryDropdown(results.length > 0);
     }, 400);
@@ -286,7 +303,7 @@ export default function OwnerDashboard() {
       remainingFees: pf,
       branchId: selectedBranch?.id || null,
     };
-    delete payload.courseType; delete payload.totalClasses; delete payload.duration; delete payload.classDuration;
+    delete payload.courseType;
     delete payload.matchedInquiryId;
     try {
       let studentId;
@@ -365,10 +382,10 @@ export default function OwnerDashboard() {
       discountValue: s.discountValue || 0,
       feeNote: s.feeNote || "",
       batchTime: s.batchTime || "",
-      courseType: course ? course.label : (s.course || ""),
-      totalClasses: course ? course.totalClasses : (s.totalClasses || ""),
-      duration: course ? course.duration : (s.duration || ""),
-      classDuration: course ? course.classDuration : (s.classDuration || ""),
+      courseType: s.courseType || (course ? course.label : (s.course || "")),
+      totalClasses: s.totalClasses || (course ? course.totalClasses : ""),
+      duration: s.duration || (course ? course.duration : ""),
+      classDuration: s.classDuration || (course ? course.classDuration : ""),
     });
     setSelectedCourse(course);
     setCourseSearch(course ? course.label : "");
@@ -597,12 +614,12 @@ export default function OwnerDashboard() {
   useEffect(() => {
     if (!["inquiries", "addInquiry", "viewInquiry", "dashboard"].includes(view)) return;
     setInquiriesLoading(true);
-    const unsub = subscribeInquiries(selectedBranch?.id, (data) => {
+    const unsub = subscribeInquiries(searchAllBranches ? null : selectedBranch?.id, (data) => {
       setInquiries(data);
       setInquiriesLoading(false);
     });
     return unsub;
-  }, [view, selectedBranch]);
+  }, [view, selectedBranch, searchAllBranches]);
 
   const filteredInquiries = inquiries
     .filter((inq) => {
@@ -1088,17 +1105,22 @@ export default function OwnerDashboard() {
                           {showInquiryDropdown && inquiryResults.length > 0 && (
                             <div className="inquiry-dropdown" ref={inquiryDropdownRef}>
                               <div style={{ padding: "6px 12px", fontSize: 11, color: "var(--gray-400)", borderBottom: "1px solid var(--gray-200)" }}>
-                                <Search size={12} style={{ marginRight: 4 }} /> Matching inquiries
+                                <Search size={12} style={{ marginRight: 4 }} /> {searchAllBranches ? "All branches" : "This branch"} — {inquiryResults.length} match{inquiryResults.length !== 1 ? "es" : ""}
                               </div>
-                              {inquiryResults.map((inq) => (
-                                <div key={inq.id} className="inquiry-dropdown-item" onClick={() => handleSelectInquiry(inq)}>
-                                  <div className="inquiry-dropdown-name">
-                                    {inq.name}
-                                    {inq.courseInterested && <span className="inquiry-badge">{inq.courseInterested}</span>}
+                              {inquiryResults.map((inq) => {
+                                const branch = branches?.find((b) => b.id === inq.branchId);
+                                return (
+                                  <div key={inq.id} className="inquiry-dropdown-item" onClick={() => handleSelectInquiry(inq)}>
+                                    <div className="inquiry-dropdown-name">
+                                      {inq.name}
+                                      {inq.courseInterested && <span className="inquiry-badge">{inq.courseInterested}</span>}
+                                      {branch && <span className="inquiry-badge" style={{ background: "#E0E7FF", color: "#4338CA" }}>{branch.name}</span>}
+                                    </div>
+                                    <div className="inquiry-dropdown-detail">{inq.phone} {inq.email ? `· ${inq.email}` : ""}</div>
+                                    {inq.notes && <div className="inquiry-dropdown-detail" style={{ fontStyle: "italic" }}>{inq.notes.length > 60 ? inq.notes.slice(0, 60) + "..." : inq.notes}</div>}
                                   </div>
-                                  <div className="inquiry-dropdown-detail">{inq.phone} {inq.email ? `· ${inq.email}` : ""}</div>
-                                </div>
-                              ))}
+                                );
+                              })}
                             </div>
                           )}
                         </div>
@@ -1205,30 +1227,81 @@ export default function OwnerDashboard() {
                     <div className="form-group">
                       <label>Select Course *</label>
                       <div className="course-select-wrapper" ref={courseDropdownRef}>
-                        <input
-                          className="form-input"
-                          value={selectedCourse ? selectedCourse.label : courseSearch}
-                          onChange={(e) => { setCourseSearch(e.target.value); setSelectedCourse(null); setForm({ ...form, course: "", selectedVehicles: [], courseFees: 0, twoWheelerType: "", twoWheelerName: "", twoWheelerPrice: 0 }); setShowCourseDropdown(true); }}
-                          onFocus={() => setShowCourseDropdown(true)}
-                          placeholder="Search or select a course..."
-                        />
+                        <div className="course-input-row">
+                          <input
+                            className="form-input"
+                            value={selectedCourse ? selectedCourse.label : courseSearch}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              setCourseSearch(val);
+                              setSelectedCourse(null);
+                              setForm({ ...form, course: val || "", courseType: val || "", selectedVehicles: [], courseFees: 0, twoWheelerType: "", twoWheelerName: "", twoWheelerPrice: 0 });
+                              setShowCourseDropdown(true);
+                            }}
+                            onFocus={() => { setShowCourseDropdown(true); setShowAddCourse(false); }}
+                            placeholder="Search or type a custom course..."
+                          />
+                          <button type="button" className="course-add-btn" title="Add custom course" onClick={() => { setShowAddCourse(!showAddCourse); setShowCourseDropdown(false); setNewCourseName(""); }}>
+                            <Plus size={16} />
+                          </button>
+                        </div>
+                        {showAddCourse && (
+                          <div className="course-add-bar">
+                            <input
+                              className="form-input"
+                              placeholder="Enter custom course name..."
+                              value={newCourseName}
+                              onChange={(e) => setNewCourseName(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter" && newCourseName.trim()) {
+                                  const name = newCourseName.trim();
+                                  setForm({ ...form, course: name, courseType: name });
+                                  setSelectedCourse({ id: name, label: name, duration: "", totalClasses: "", classDuration: "" });
+                                  setCourseSearch(name);
+                                  setShowAddCourse(false);
+                                }
+                              }}
+                              autoFocus
+                            />
+                            <button type="button" className="course-add-confirm" onClick={() => {
+                              if (newCourseName.trim()) {
+                                const name = newCourseName.trim();
+                                setForm({ ...form, course: name, courseType: name });
+                                setSelectedCourse({ id: name, label: name, duration: "", totalClasses: "", classDuration: "" });
+                                setCourseSearch(name);
+                                setShowAddCourse(false);
+                              }
+                            }}>Add</button>
+                          </div>
+                        )}
                         {showCourseDropdown && (
                           <div className="course-dropdown">
-                            {filteredCourses.length === 0 ? (
+                            {filteredCourses.length === 0 && !courseSearch.trim() ? (
                               <div className="course-dropdown-empty">No courses found</div>
                             ) : (
-                              filteredCourses.map((c) => (
-                                <div key={c.id} className="course-dropdown-item" onClick={() => {
-                                  setSelectedCourse(c);
-                                  setCourseSearch(c.label);
-                                  const fp = Number(form.feesPaid) || 0;
-                                  setForm({ ...form, course: c.id, courseFees: 0, pendingFees: 0, courseType: c.label, totalClasses: c.totalClasses, duration: c.duration, classDuration: c.classDuration, selectedVehicles: [], discountType: "", discountValue: 0, twoWheelerType: "", twoWheelerName: "", twoWheelerPrice: 0 });
-                                  setShowCourseDropdown(false);
-                                }}>
-                                  <div className="course-dropdown-label">{c.label}</div>
-                                  <div className="course-dropdown-meta">{c.duration} · {c.totalClasses} classes</div>
-                                </div>
-                              ))
+                              <>
+                                {courseSearch.trim() && filteredCourses.length === 0 && (
+                                  <div className="course-dropdown-item" onClick={() => {
+                                    setForm({ ...form, course: courseSearch.trim(), courseType: courseSearch.trim() });
+                                    setSelectedCourse({ id: courseSearch.trim(), label: courseSearch.trim(), duration: "", totalClasses: "", classDuration: "" });
+                                    setShowCourseDropdown(false);
+                                  }}>
+                                    <div className="course-dropdown-label">Use "{courseSearch}" as custom course</div>
+                                  </div>
+                                )}
+                                {filteredCourses.map((c) => (
+                                  <div key={c.id} className="course-dropdown-item" onClick={() => {
+                                    setSelectedCourse(c);
+                                    setCourseSearch(c.label);
+                                    const fp = Number(form.feesPaid) || 0;
+                                    setForm({ ...form, course: c.id, courseFees: 0, pendingFees: 0, courseType: c.label, totalClasses: c.totalClasses, duration: c.duration, classDuration: c.classDuration, selectedVehicles: [], discountType: "", discountValue: 0, twoWheelerType: "", twoWheelerName: "", twoWheelerPrice: 0 });
+                                    setShowCourseDropdown(false);
+                                  }}>
+                                    <div className="course-dropdown-label">{c.label}</div>
+                                    <div className="course-dropdown-meta">{c.duration} · {c.totalClasses} classes</div>
+                                  </div>
+                                ))}
+                              </>
                             )}
                           </div>
                         )}
@@ -1454,15 +1527,12 @@ export default function OwnerDashboard() {
                       {form.batch && (
                         <div className="form-group">
                           <label>{form.batch} Time Slot</label>
-                          <select className="form-input" value={form.batchTime} onChange={(e) => setForm({ ...form, batchTime: e.target.value })}>
-                            <option value="">— Select time —</option>
-                            {(form.batch === "Morning"
-                              ? ["06:00 AM – 06:30 AM","06:30 AM – 07:00 AM","07:00 AM – 07:30 AM","07:30 AM – 08:00 AM","08:00 AM – 08:30 AM","08:30 AM – 09:00 AM","09:00 AM – 09:30 AM","09:30 AM – 10:00 AM","10:00 AM – 10:30 AM","10:30 AM – 11:00 AM","11:00 AM – 11:30 AM","11:30 AM – 12:00 PM","12:00 PM – 12:30 PM","12:30 PM – 01:00 PM"]
-                              : ["04:00 PM – 04:30 PM","04:30 PM – 05:00 PM","05:00 PM – 05:30 PM","05:30 PM – 06:00 PM","06:00 PM – 06:30 PM","06:30 PM – 07:00 PM","07:00 PM – 07:30 PM","07:30 PM – 08:00 PM","08:00 PM – 08:30 PM","08:30 PM – 09:00 PM","09:00 PM – 09:30 PM"]
-                            ).map((slot) => (
-                              <option key={slot} value={slot}>{slot}</option>
+                          <input className="form-input" list="ownerBatchTimeOptions" value={form.batchTime} onChange={(e) => setForm({ ...form, batchTime: e.target.value })} placeholder="Type or select a time slot" />
+                          <datalist id="ownerBatchTimeOptions">
+                            {(form.batch === "Morning" ? MORNING_SLOTS : EVENING_SLOTS).map((slot) => (
+                              <option key={slot} value={slot} />
                             ))}
-                          </select>
+                          </datalist>
                         </div>
                       )}
                     </div>
@@ -1911,6 +1981,14 @@ export default function OwnerDashboard() {
 
               <div className="search-bar">
                 <input type="text" placeholder="Search by name or phone..." value={inquirySearch} onChange={(e) => setInquirySearch(e.target.value)} />
+                <button
+                  className={`btn btn-sm ${searchAllBranches ? "btn-primary" : "btn-secondary"}`}
+                  onClick={() => setSearchAllBranches((v) => !v)}
+                  style={{ whiteSpace: "nowrap" }}
+                >
+                  <Building2 size={14} style={{ marginRight: 4, verticalAlign: "middle" }} />
+                  {searchAllBranches ? "All Branches" : "This Branch"}
+                </button>
               </div>
 
               {inquiriesLoading ? (
@@ -1926,6 +2004,7 @@ export default function OwnerDashboard() {
                           <tr>
                             <th>Name</th>
                             <th>Phone</th>
+                            {searchAllBranches && <th>Branch</th>}
                             <th>Course</th>
                             <th>Inquiry Date</th>
                             <th>Follow-up</th>
@@ -1939,6 +2018,11 @@ export default function OwnerDashboard() {
                             <tr key={inq.id} className={due ? "row-followup-due" : ""}>
                               <td className="td-name">{inq.name}</td>
                               <td>{inq.phone}</td>
+                              {searchAllBranches && (
+                                <td><span className="inquiry-badge" style={{ background: "#E0E7FF", color: "#4338CA" }}>
+                                  {branches.find((b) => b.id === inq.branchId)?.name || "—"}
+                                </span></td>
+                              )}
                               <td><span className="badge badge-course">{inq.courseInterested || "—"}</span></td>
                               <td>{inq.inquiryDate}</td>
                               <td>
@@ -1978,6 +2062,9 @@ export default function OwnerDashboard() {
                         <div key={inq.id} className="data-card" style={due ? { borderLeft: "4px solid #d97706" } : {}}>
                           <div className="data-card-row"><span className="data-card-label"><User size={14} /></span><span className="data-card-value">{inq.name}</span></div>
                           <div className="data-card-row"><span className="data-card-label"><Phone size={14} /></span><span className="data-card-value">{inq.phone}</span></div>
+                          {searchAllBranches && (
+                            <div className="data-card-row"><span className="data-card-label"><Building2 size={14} /></span><span className="data-card-value"><span className="inquiry-badge" style={{ background: "#E0E7FF", color: "#4338CA" }}>{branches.find((b) => b.id === inq.branchId)?.name || "—"}</span></span></div>
+                          )}
                           <div className="data-card-row"><span className="data-card-label"><BookOpen size={14} /></span><span className="data-card-value">{inq.courseInterested || "—"}</span></div>
                           <div className="data-card-row"><span className="data-card-label"><Calendar size={14} /></span><span className="data-card-value">{inq.inquiryDate}</span></div>
                           <div className="data-card-row">
@@ -2491,7 +2578,7 @@ function ExtraCarList({ extras, svPrice, onAdd, onRemove, onPriceChange }) {
           value={input} onChange={(e) => setInput(e.target.value)}
           style={{ width: 200, padding: "4px 8px", fontSize: 13 }}
         />
-        <button className="btn btn-sm btn-primary" style={{ padding: "4px 12px", fontSize: 12 }}
+        <button type="button" className="btn btn-sm btn-primary" style={{ padding: "4px 12px", fontSize: 12 }}
           onClick={() => {
             if (!input.trim()) return;
             onAdd(input.trim(), svPrice);
@@ -2507,7 +2594,7 @@ function ExtraCarList({ extras, svPrice, onAdd, onRemove, onPriceChange }) {
             onChange={(e) => onPriceChange(extra.id, Math.max(0, Number(e.target.value) || 0))}
             style={{ width: 80, padding: "2px 6px", border: "1px solid var(--gray-300)", borderRadius: 4, fontSize: 12 }}
           />
-          <button className="btn btn-sm btn-secondary" style={{ padding: "2px 6px", fontSize: 11, lineHeight: "1.2" }}
+          <button type="button" className="btn btn-sm btn-secondary" style={{ padding: "2px 6px", fontSize: 11, lineHeight: "1.2" }}
             onClick={() => onRemove(extra.id)}
           >✕</button>
         </div>
@@ -2532,7 +2619,7 @@ function CustomCarSection({ onAdd, onRemove, onPriceChange, customVehicles }) {
           onChange={(e) => setPrice(Math.max(0, Number(e.target.value) || 0))}
           style={{ width: 100, padding: "4px 8px", fontSize: 13 }}
         />
-        <button className="btn btn-sm btn-primary" style={{ padding: "4px 12px", fontSize: 12 }}
+        <button type="button" className="btn btn-sm btn-primary" style={{ padding: "4px 12px", fontSize: 12 }}
           onClick={() => {
             if (!name.trim()) return;
             onAdd(name.trim(), price || 0);
@@ -2549,7 +2636,7 @@ function CustomCarSection({ onAdd, onRemove, onPriceChange, customVehicles }) {
             onChange={(e) => onPriceChange(cc.id, Math.max(0, Number(e.target.value) || 0))}
             style={{ width: 80, padding: "2px 6px", border: "1px solid var(--gray-300)", borderRadius: 4, fontSize: 12 }}
           />
-          <button className="btn btn-sm btn-secondary" style={{ padding: "2px 6px", fontSize: 11, lineHeight: "1.2" }}
+          <button type="button" className="btn btn-sm btn-secondary" style={{ padding: "2px 6px", fontSize: 11, lineHeight: "1.2" }}
             onClick={() => onRemove(cc.id)}
           >✕</button>
         </div>

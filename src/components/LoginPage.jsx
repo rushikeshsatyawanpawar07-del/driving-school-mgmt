@@ -50,6 +50,20 @@ export default function LoginPage() {
       await auth.signOut();
       throw new Error(`This account is registered as ${userData.role}, not ${role}.`);
     }
+    if (role === "teacher") {
+      const tSnap = await getDoc(doc(db, "teachers", firebaseUser.uid));
+      if (tSnap.exists() && tSnap.data().status === "inactive") {
+        await auth.signOut();
+        throw new Error("Your account has been disabled. Contact the owner.");
+      }
+    }
+    if (role === "reception") {
+      const rSnap = await getDoc(doc(db, "receptionists", firebaseUser.uid));
+      if (rSnap.exists() && rSnap.data().status === "inactive") {
+        await auth.signOut();
+        throw new Error("Your account has been disabled. Contact the owner.");
+      }
+    }
     if (role === "client") {
       navigate("/client-dashboard", { replace: true });
       return;
